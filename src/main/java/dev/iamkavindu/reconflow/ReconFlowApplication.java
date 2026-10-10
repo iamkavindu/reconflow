@@ -9,5 +9,4 @@ public class ReconFlowApplication {
     public static void main(String[] args) {
         SpringApplication.run(ReconFlowApplication.class, args);
     }
-
 }

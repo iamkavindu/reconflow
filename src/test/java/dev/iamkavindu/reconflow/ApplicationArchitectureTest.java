@@ -7,7 +7,6 @@ class ApplicationArchitectureTest {
 
     @Test
     void verifiesModularStructure() {
-        ApplicationModules.of(ReconFlowApplication.class)
-                .verify();
+        ApplicationModules.of(ReconFlowApplication.class).verify();
     }
 }

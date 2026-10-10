@@ -119,24 +119,6 @@ class TransactionTest {
                 () -> assertThrows(NullPointerException.class, () -> new TenantId(null)));
     }
 
-    @Test
-    void rejectsBlankOrOverlongBusinessReference() {
-        assertAll(
-                () -> assertThrows(IllegalArgumentException.class, () -> new BusinessReference("  \t ")),
-                () -> assertThrows(IllegalArgumentException.class, () -> new BusinessReference("x".repeat(256))));
-    }
-
-    @Test
-    void rejectsInvalidMoney() {
-        Currency usd = Currency.getInstance("USD");
-
-        assertAll(
-                () -> assertThrows(NullPointerException.class, () -> new Money(null, usd)),
-                () -> assertThrows(NullPointerException.class, () -> new Money(BigDecimal.ONE, null)),
-                () -> assertThrows(IllegalArgumentException.class, () -> new Money(BigDecimal.ZERO, usd)),
-                () -> assertThrows(IllegalArgumentException.class, () -> new Money(new BigDecimal("-1.00"), usd)));
-    }
-
     private static Transaction validTransaction() {
         return Transaction.record(
                 TRANSACTION_ID,

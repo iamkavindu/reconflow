@@ -10,7 +10,7 @@ public record BusinessReference(String value) {
             throw new IllegalArgumentException("value must not be blank");
         }
         if (value.length() > 100) {
-            throw new IllegalArgumentException("value must be at most 50 characters");
+            throw new IllegalArgumentException("value must be at most 100 characters");
         }
     }
 }

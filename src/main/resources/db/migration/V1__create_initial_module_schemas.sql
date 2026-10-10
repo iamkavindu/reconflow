@@ -1,0 +1,2 @@
+CREATE SCHEMA IF NOT EXISTS transactions;
+CREATE SCHEMA IF NOT EXISTS reconciliation;

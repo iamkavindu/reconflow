@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: reconflow
+  jpa:
+    hibernate:
+      ddl-auto: validate

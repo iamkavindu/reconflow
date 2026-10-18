@@ -15,7 +15,8 @@ public final class ReconciliationEvaluator {
         if (!transaction.tenantId().equals(providerTransaction.tenantId())) {
             throw new IllegalArgumentException("reconciliation records must belong to the same tenant");
         }
-        Duration difference = Duration.between(transaction.occurredAt(), providerTransaction.occurredAt()).abs();
+        Duration difference = Duration.between(transaction.occurredAt(), providerTransaction.occurredAt())
+                .abs();
         return List.of(
                 equal("REFERENCE", transaction.businessReference(), providerTransaction.businessReference()),
                 new RuleEvaluation(
@@ -24,7 +25,10 @@ public final class ReconciliationEvaluator {
                         transaction.amount().toPlainString(),
                         providerTransaction.amount().toPlainString()),
                 equal("CURRENCY", transaction.currency(), providerTransaction.currency()),
-                equal("TYPE", transaction.type().name(), providerTransaction.type().name()),
+                equal(
+                        "TYPE",
+                        transaction.type().name(),
+                        providerTransaction.type().name()),
                 new RuleEvaluation(
                         "STATUS",
                         transaction.status() == TransactionStatus.RECORDED

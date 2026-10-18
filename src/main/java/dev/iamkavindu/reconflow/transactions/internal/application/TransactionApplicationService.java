@@ -14,6 +14,7 @@ import dev.iamkavindu.reconflow.transactions.internal.domain.Transaction;
 import dev.iamkavindu.reconflow.transactions.internal.domain.TransactionRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.UUID;
@@ -52,7 +53,7 @@ public class TransactionApplicationService implements TransactionCommands, Trans
                 command.type(),
                 new Money(command.amount(), command.currency()),
                 command.occurredAt(),
-                Instant.now(clock));
+                Instant.now(clock).truncatedTo(ChronoUnit.MICROS));
 
         Transaction saved = transactionRepository.save(transaction);
 

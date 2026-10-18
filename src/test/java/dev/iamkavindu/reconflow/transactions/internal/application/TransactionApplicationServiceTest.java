@@ -33,13 +33,14 @@ class TransactionApplicationServiceTest {
     private static final TenantId OTHER_TENANT_ID =
             new TenantId(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
     private static final Instant OCCURRED_AT = Instant.parse("2026-10-10T09:25:00Z");
-    private static final Instant RECORDED_AT = Instant.parse("2026-10-10T09:25:03Z");
+    private static final Instant CLOCK_INSTANT = Instant.parse("2026-10-10T09:25:03.123456789Z");
+    private static final Instant RECORDED_AT = Instant.parse("2026-10-10T09:25:03.123456Z");
 
     private final InMemoryTransactionRepository repository = new InMemoryTransactionRepository();
     private final CurrentTenant currentTenant = () -> TENANT_ID;
     private final List<Object> publishedEvents = new ArrayList<>();
     private final TransactionApplicationService service = new TransactionApplicationService(
-            currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
+            currentTenant, repository, Clock.fixed(CLOCK_INSTANT, ZoneOffset.UTC), publishedEvents::add);
 
     @Test
     void recordsTransactionUsingTrustedTenantAndApplicationControlledValues() {

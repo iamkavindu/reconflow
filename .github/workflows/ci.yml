@@ -32,4 +32,3 @@ jobs:
 
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
-

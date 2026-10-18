@@ -182,6 +182,11 @@ class AuthenticatedApiIntegrationTest {
                 .andReturn();
         String location = created.getResponse().getHeader("Location");
         assertThat(location).startsWith("/api/transactions/");
+        String id = location.substring(location.lastIndexOf('/') + 1);
+        mvc.perform(get("/api/audit/TRANSACTION/" + id)
+                        .param("limit", "101")
+                        .header("Authorization", token("viewer", TENANT)))
+                .andExpect(status().isBadRequest());
         mvc.perform(get(location).header("Authorization", token("viewer", TENANT)))
                 .andExpect(status().isOk());
         mvc.perform(get(location).header("Authorization", token("other", OTHER_TENANT)))

@@ -7,6 +7,7 @@ import dev.iamkavindu.reconflow.transactions.TransactionCommands;
 import dev.iamkavindu.reconflow.transactions.TransactionId;
 import dev.iamkavindu.reconflow.transactions.TransactionQueries;
 import dev.iamkavindu.reconflow.transactions.TransactionView;
+import dev.iamkavindu.reconflow.transactions.events.TransactionRecorded;
 import dev.iamkavindu.reconflow.transactions.internal.domain.BusinessReference;
 import dev.iamkavindu.reconflow.transactions.internal.domain.Money;
 import dev.iamkavindu.reconflow.transactions.internal.domain.Transaction;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +27,17 @@ public class TransactionApplicationService implements TransactionCommands, Trans
     private final CurrentTenant currentTenant;
     private final TransactionRepository transactionRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TransactionApplicationService(
-            CurrentTenant currentTenant, TransactionRepository transactionRepository, Clock clock) {
+            CurrentTenant currentTenant,
+            TransactionRepository transactionRepository,
+            Clock clock,
+            ApplicationEventPublisher eventPublisher) {
         this.currentTenant = currentTenant;
         this.transactionRepository = transactionRepository;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -47,7 +54,17 @@ public class TransactionApplicationService implements TransactionCommands, Trans
                 command.occurredAt(),
                 Instant.now(clock));
 
-        return toView(transactionRepository.save(transaction));
+        Transaction saved = transactionRepository.save(transaction);
+
+        eventPublisher.publishEvent(new TransactionRecorded(
+                UUID.randomUUID(),
+                saved.tenantId(),
+                saved.transactionId(),
+                saved.businessReference().value(),
+                saved.recordedAt(),
+                UUID.randomUUID()));
+
+        return toView(saved);
     }
 
     @Override

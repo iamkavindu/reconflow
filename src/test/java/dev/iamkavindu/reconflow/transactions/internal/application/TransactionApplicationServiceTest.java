@@ -10,14 +10,17 @@ import dev.iamkavindu.reconflow.transactions.TransactionId;
 import dev.iamkavindu.reconflow.transactions.TransactionStatus;
 import dev.iamkavindu.reconflow.transactions.TransactionType;
 import dev.iamkavindu.reconflow.transactions.TransactionView;
+import dev.iamkavindu.reconflow.transactions.events.TransactionRecorded;
 import dev.iamkavindu.reconflow.transactions.internal.domain.Transaction;
 import dev.iamkavindu.reconflow.transactions.internal.domain.TransactionRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Currency;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -34,8 +37,10 @@ class TransactionApplicationServiceTest {
 
     private final InMemoryTransactionRepository repository = new InMemoryTransactionRepository();
     private final CurrentTenant currentTenant = () -> TENANT_ID;
+    private final List<Object> publishedEvents = new ArrayList<>();
     private final TransactionApplicationService service =
-            new TransactionApplicationService(currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC));
+            new TransactionApplicationService(
+                    currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
 
     @Test
     void recordsTransactionUsingTrustedTenantAndApplicationControlledValues() {
@@ -55,6 +60,7 @@ class TransactionApplicationServiceTest {
         assertThat(recorded.occurredAt()).isEqualTo(OCCURRED_AT);
         assertThat(recorded.status()).isEqualTo(TransactionStatus.RECORDED);
         assertThat(recorded.recordedAt()).isEqualTo(RECORDED_AT);
+        assertThat(publishedEvents).singleElement().isInstanceOf(TransactionRecorded.class);
     }
 
     @Test

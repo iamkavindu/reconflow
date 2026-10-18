@@ -9,16 +9,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 class ProviderEventMessageMapperTest {
 
-    private final ProviderEventMessageMapper mapper = new ProviderEventMessageMapper(JsonMapper.builder()
-            .findAndAddModules()
-            .build());
+    private final ProviderEventMessageMapper mapper = new ProviderEventMessageMapper(
+            JsonMapper.builder().findAndAddModules().build());
 
     @Test
     void mapsVersionedEnvelopeToProviderIngestionCommand() {
         var command = mapper.toCommand(validMessage(1, ProviderEventMessageMapper.EVENT_TYPE));
 
-        assertThat(command.tenantId().value())
-                .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(command.tenantId().value()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         assertThat(command.eventId()).isEqualTo("evt-1001");
         assertThat(command.provider()).isEqualTo("stripe");
         assertThat(command.providerTransactionReference()).isEqualTo("pi-1001");
@@ -63,7 +61,6 @@ class ProviderEventMessageMapperTest {
                     "occurredAt": "2026-10-10T09:25:00Z"
                   }
                 }
-                """
-                .formatted(schemaVersion, eventType);
+                """.formatted(schemaVersion, eventType);
     }
 }

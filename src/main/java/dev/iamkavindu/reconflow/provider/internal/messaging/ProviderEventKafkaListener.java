@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
-@ConditionalOnProperty(
-        prefix = "reconflow.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "reconflow.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
 class ProviderEventKafkaListener {
 
     private final ProviderEventMessageMapper messageMapper;

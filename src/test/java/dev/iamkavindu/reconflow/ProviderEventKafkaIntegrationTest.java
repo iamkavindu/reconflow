@@ -150,7 +150,6 @@ class ProviderEventKafkaIntegrationTest {
                     "occurredAt": "2026-10-10T09:25:00Z"
                   }
                 }
-                """
-                .formatted(UUID.randomUUID(), providerEventId, providerEventId);
+                """.formatted(UUID.randomUUID(), providerEventId, providerEventId);
     }
 }

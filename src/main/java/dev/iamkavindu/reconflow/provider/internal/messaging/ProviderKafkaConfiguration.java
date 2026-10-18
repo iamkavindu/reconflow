@@ -6,6 +6,5 @@ import org.springframework.kafka.annotation.EnableKafkaRetryTopic;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafkaRetryTopic
-@ConditionalOnProperty(
-        prefix = "reconflow.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "reconflow.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
 class ProviderKafkaConfiguration {}

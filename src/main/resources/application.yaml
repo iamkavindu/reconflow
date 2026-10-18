@@ -4,7 +4,22 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 reconflow:
+  kafka:
+    enabled: true
+    provider-events-group: reconflow-provider-events-v1
+    provider-events-topic: reconflow.provider-events.v1
   tenancy:
     current-tenant-id: 00000000-0000-0000-0000-000000000001

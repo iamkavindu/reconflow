@@ -35,6 +35,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureMockMvc
@@ -239,6 +240,28 @@ class AuthenticatedApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resolution))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void settlementImportsUseMembershipPermissionsAndTenant() throws Exception {
+        String source = """
+                {"provider":"stripe","providerSettlementReference":"%s","currency":"USD",
+                 "grossAmount":100.00,"feeAmount":3.20,"netAmount":96.80,"settledAt":"2026-10-18T12:00:00Z",
+                 "lines":[{"providerTransactionReference":"pi-demo","grossAmount":100.00,"feeAmount":3.20,"netAmount":96.80}]}
+                """.formatted(UUID.randomUUID());
+        mvc.perform(post("/api/settlements").header("Authorization", token("viewer", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON).content(source))
+                .andExpect(status().isForbidden());
+        var result = mvc.perform(post("/api/settlements").header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON).content(source))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.tenantId.value").value(TENANT)).andReturn();
+        String id = JsonMapper.builder().build().readTree(result.getResponse().getContentAsString())
+                .get("settlementId").get("value").asString();
+        mvc.perform(get("/api/settlements/" + id).header("Authorization", token("other", OTHER_TENANT)))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/settlements").header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON).content(source.replace("3.20", "3.21")))
+                .andExpect(status().isBadRequest());
     }
 
     private void membership(String tenant, String subject, String role) {

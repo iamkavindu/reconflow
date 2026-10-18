@@ -23,6 +23,7 @@ import dev.iamkavindu.reconflow.transactions.TransactionView;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,6 +40,7 @@ class AutomaticReconciliation {
     private final CandidateLock candidateLock;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final SettlementFeeEvidence settlementFees;
     private final ReconciliationEvaluator evaluator = new ReconciliationEvaluator();
     private final DiscrepancyDetector discrepancyDetector = new DiscrepancyDetector();
 
@@ -49,7 +51,8 @@ class AutomaticReconciliation {
             ReconciliationPolicy policy,
             CandidateLock candidateLock,
             Clock clock,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            SettlementFeeEvidence settlementFees) {
         this.transactions = transactions;
         this.providerTransactions = providerTransactions;
         this.reconciliations = reconciliations;
@@ -57,6 +60,7 @@ class AutomaticReconciliation {
         this.candidateLock = candidateLock;
         this.clock = clock;
         this.events = events;
+        this.settlementFees = settlementFees;
     }
 
     @Transactional
@@ -167,7 +171,8 @@ class AutomaticReconciliation {
             }
             var evaluations =
                     evaluator.evaluate(transaction, providerTransaction, policy.maximumTransactionTimeDifference());
-            var discrepancies = discrepancyDetector.detect(evaluations, transaction.type(), now);
+            var discrepancies = new ArrayList<>(discrepancyDetector.detect(evaluations, transaction.type(), now));
+            discrepancies.addAll(settlementFees.findings(transaction, providerTransaction, now));
             if (!discrepancies.isEmpty()) {
                 requireReview(
                         reconciliation,

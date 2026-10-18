@@ -6,6 +6,7 @@ import dev.iamkavindu.reconflow.cases.events.CaseOpened;
 import dev.iamkavindu.reconflow.cases.events.CaseResolved;
 import dev.iamkavindu.reconflow.cases.events.CaseReviewStarted;
 import dev.iamkavindu.reconflow.provider.events.ProviderTransactionRecorded;
+import dev.iamkavindu.reconflow.provider.events.SettlementImported;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationMatched;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationReviewRequired;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationUnmatched;
@@ -54,6 +55,12 @@ class AuditEventListener {
                 event.recordedAt(),
                 event.correlationId(),
                 event.causationId());
+    }
+
+    @ApplicationModuleListener
+    void on(SettlementImported event) {
+        append(event.eventId(), event.tenantId(), AuditResourceType.SETTLEMENT, event.settlementId().value(),
+                "SETTLEMENT_IMPORTED", event.recordedBy(), event.recordedAt(), event.correlationId(), null);
     }
 
     @ApplicationModuleListener

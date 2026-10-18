@@ -49,7 +49,9 @@ class TransactionController {
                 Currency.getInstance(request.currency()),
                 request.occurredAt());
         var result = commands.recordTransaction(command);
-        return ResponseEntity.created(URI.create("/api/transactions/" + result.transactionId().value())).body(result);
+        return ResponseEntity.created(
+                        URI.create("/api/transactions/" + result.transactionId().value()))
+                .body(result);
     }
 
     @GetMapping("/{id}")

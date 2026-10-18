@@ -58,9 +58,8 @@ class KeycloakRealmIntegrationTest {
                 var jwt = decoder.decode(token);
                 assertThat(jwt.getSubject()).isEqualTo("10000000-0000-0000-0000-00000000000" + (index + 1));
                 assertThat(jwt.getAudience()).contains("reconflow");
-                String tenant = index == 3
-                        ? "00000000-0000-0000-0000-000000000002"
-                        : "00000000-0000-0000-0000-000000000001";
+                String tenant =
+                        index == 3 ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001";
                 assertThat(jwt.getClaimAsString("tenant_id")).isEqualTo(tenant);
             }
         }

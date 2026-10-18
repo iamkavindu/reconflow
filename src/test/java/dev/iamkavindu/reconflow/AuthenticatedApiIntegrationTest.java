@@ -99,20 +99,47 @@ class AuthenticatedApiIntegrationTest {
         mvc.perform(get("/api/session")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/session").header("Authorization", "Basic YWRtaW46YWRtaW4="))
                 .andExpect(status().isUnauthorized());
-        String[][] invalid = {{"wrong-issuer", "reconflow", TENANT}, {ISSUER, "wrong-audience", TENANT},
-            {ISSUER, "reconflow", "bad-tenant"}};
+        String[][] invalid = {
+            {"wrong-issuer", "reconflow", TENANT},
+            {ISSUER, "wrong-audience", TENANT},
+            {ISSUER, "reconflow", "bad-tenant"}
+        };
         for (String[] claims : invalid) {
-            mvc.perform(get("/api/session").header("Authorization",
-                            token("analyst", claims[2], claims[0], claims[1], Instant.now().plusSeconds(300), KEY)))
+            mvc.perform(get("/api/session")
+                            .header(
+                                    "Authorization",
+                                    token(
+                                            "analyst",
+                                            claims[2],
+                                            claims[0],
+                                            claims[1],
+                                            Instant.now().plusSeconds(300),
+                                            KEY)))
                     .andExpect(status().isUnauthorized())
                     .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
         }
-        mvc.perform(get("/api/session").header("Authorization",
-                        token("analyst", TENANT, ISSUER, "reconflow", Instant.now().minusSeconds(300), KEY)))
+        mvc.perform(get("/api/session")
+                        .header(
+                                "Authorization",
+                                token(
+                                        "analyst",
+                                        TENANT,
+                                        ISSUER,
+                                        "reconflow",
+                                        Instant.now().minusSeconds(300),
+                                        KEY)))
                 .andExpect(status().isUnauthorized());
         RSAKey untrusted = new RSAKeyGenerator(2048).keyID("test-key").generate();
-        mvc.perform(get("/api/session").header("Authorization",
-                        token("analyst", TENANT, ISSUER, "reconflow", Instant.now().plusSeconds(300), untrusted)))
+        mvc.perform(get("/api/session")
+                        .header(
+                                "Authorization",
+                                token(
+                                        "analyst",
+                                        TENANT,
+                                        ISSUER,
+                                        "reconflow",
+                                        Instant.now().plusSeconds(300),
+                                        untrusted)))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/session").header("Authorization", token("unknown", TENANT)))
                 .andExpect(status().isUnauthorized());
@@ -127,13 +154,17 @@ class AuthenticatedApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tenantId.value").value(TENANT))
                 .andExpect(jsonPath("$.role").value("VIEWER"));
-        mvc.perform(post("/api/transactions").header("Authorization", bearer)
-                        .contentType(MediaType.APPLICATION_JSON).content(transaction()))
+        mvc.perform(post("/api/transactions")
+                        .header("Authorization", bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transaction()))
                 .andExpect(status().isForbidden());
         membership(TENANT, "viewer", "ANALYST");
-        mvc.perform(post("/api/transactions").header("Authorization", bearer)
+        mvc.perform(post("/api/transactions")
+                        .header("Authorization", bearer)
                         .header("X-Tenant-Id", OTHER_TENANT)
-                        .contentType(MediaType.APPLICATION_JSON).content(transaction()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transaction()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tenantId.value").value(TENANT));
         jdbc.sql("UPDATE tenancy.tenant_memberships SET enabled = false WHERE oidc_subject = 'viewer'")
@@ -143,22 +174,28 @@ class AuthenticatedApiIntegrationTest {
 
     @Test
     void protectsFinancialReadsAndValidatesInputs() throws Exception {
-        var created = mvc.perform(post("/api/transactions").header("Authorization", token("admin", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content(transaction()))
-                .andExpect(status().isCreated()).andReturn();
+        var created = mvc.perform(post("/api/transactions")
+                        .header("Authorization", token("admin", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transaction()))
+                .andExpect(status().isCreated())
+                .andReturn();
         String location = created.getResponse().getHeader("Location");
         assertThat(location).startsWith("/api/transactions/");
         mvc.perform(get(location).header("Authorization", token("viewer", TENANT)))
                 .andExpect(status().isOk());
         mvc.perform(get(location).header("Authorization", token("other", OTHER_TENANT)))
                 .andExpect(status().isNotFound());
-        mvc.perform(post("/api/transactions").header("Authorization", token("analyst", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mvc.perform(post("/api/transactions")
+                        .header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/cases/not-a-uuid").header("Authorization", token("analyst", TENANT)))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/v3/api-docs").header("Authorization", token("analyst", TENANT)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.paths['/api/transactions']").exists());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/transactions']").exists());
     }
 
     @Test
@@ -168,26 +205,34 @@ class AuthenticatedApiIntegrationTest {
                         INSERT INTO cases.cases
                         (id, tenant_id, reconciliation_id, status, opened_at, updated_at, notes, version)
                         VALUES (?, ?, ?, 'OPEN', now(), now(), '[]', 0)
-                        """)
-                .params(id, UUID.fromString(TENANT), UUID.randomUUID()).update();
+                        """).params(id, UUID.fromString(TENANT), UUID.randomUUID()).update();
         String path = "/api/cases/" + id;
         mvc.perform(get(path).header("Authorization", token("other", OTHER_TENANT)))
                 .andExpect(status().isNotFound());
         mvc.perform(post(path + "/review").header("Authorization", token("viewer", TENANT)))
                 .andExpect(status().isForbidden());
         mvc.perform(post(path + "/review").header("Authorization", token("analyst", TENANT)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UNDER_REVIEW"));
-        mvc.perform(post(path + "/notes").header("Authorization", token("analyst", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"Compared the immutable evidence\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.notes[0].addedBy").value("analyst"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UNDER_REVIEW"));
+        mvc.perform(post(path + "/notes")
+                        .header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"Compared the immutable evidence\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes[0].addedBy").value("analyst"));
         String resolution = """
                 {"type":"MANUAL_REVIEW_COMPLETED","reason":"Evidence reviewed","evidenceReferences":[]}
                 """;
-        mvc.perform(post(path + "/resolution").header("Authorization", token("analyst", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content(resolution))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.resolution.resolvedBy").value("analyst"));
-        mvc.perform(post(path + "/resolution").header("Authorization", token("admin", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content(resolution))
+        mvc.perform(post(path + "/resolution")
+                        .header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resolution))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolution.resolvedBy").value("analyst"));
+        mvc.perform(post(path + "/resolution")
+                        .header("Authorization", token("admin", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resolution))
                 .andExpect(status().isConflict());
     }
 
@@ -195,8 +240,7 @@ class AuthenticatedApiIntegrationTest {
         jdbc.sql("""
                         INSERT INTO tenancy.tenant_memberships (tenant_id, oidc_subject, role) VALUES (?, ?, ?)
                         ON CONFLICT (tenant_id, oidc_subject) DO UPDATE SET role = EXCLUDED.role, enabled = true
-                        """)
-                .params(UUID.fromString(tenant), subject, role).update();
+                        """).params(UUID.fromString(tenant), subject, role).update();
     }
 
     private String transaction() {
@@ -208,13 +252,20 @@ class AuthenticatedApiIntegrationTest {
         return token(subject, tenant, ISSUER, "reconflow", Instant.now().plusSeconds(300), KEY);
     }
 
-    private static String token(String subject, String tenant, String issuer, String audience, Instant expiry, RSAKey key)
+    private static String token(
+            String subject, String tenant, String issuer, String audience, Instant expiry, RSAKey key)
             throws JOSEException {
-        var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(subject).audience(audience)
-                .issueTime(Date.from(Instant.now().minusSeconds(600))).expirationTime(Date.from(expiry))
-                .claim("tenant_id", tenant).claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
+        var claims = new JWTClaimsSet.Builder()
+                .issuer(issuer)
+                .subject(subject)
+                .audience(audience)
+                .issueTime(Date.from(Instant.now().minusSeconds(600)))
+                .expirationTime(Date.from(expiry))
+                .claim("tenant_id", tenant)
+                .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
                 .build();
-        var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("test-key").build(), claims);
+        var jwt = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("test-key").build(), claims);
         jwt.sign(new RSASSASigner(key));
         return "Bearer " + jwt.serialize();
     }

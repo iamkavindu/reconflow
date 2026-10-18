@@ -33,8 +33,3 @@ jobs:
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
-      - name: Capture formatting diagnostic
-        if: failure()
-        run: |
-          ./mvnw --batch-mode --no-transfer-progress spotless:apply
-          git diff -- src

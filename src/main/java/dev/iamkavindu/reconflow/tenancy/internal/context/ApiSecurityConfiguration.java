@@ -45,11 +45,11 @@ class ApiSecurityConfiguration {
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.requestCache(cache -> cache.disable());
         http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated());
-        http.exceptionHandling(errors -> errors
-                .authenticationEntryPoint((request, response, error) -> unauthorized(response))
-                .accessDeniedHandler((request, response, error) -> problem(response, 403, "Forbidden")));
-        http.oauth2ResourceServer(oauth -> oauth
-                .authenticationEntryPoint((request, response, error) -> unauthorized(response))
+        http.exceptionHandling(
+                errors -> errors.authenticationEntryPoint((request, response, error) -> unauthorized(response))
+                        .accessDeniedHandler((request, response, error) -> problem(response, 403, "Forbidden")));
+        http.oauth2ResourceServer(oauth -> oauth.authenticationEntryPoint(
+                        (request, response, error) -> unauthorized(response))
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(token -> authenticate(token, memberships))));
         return http.build();
     }

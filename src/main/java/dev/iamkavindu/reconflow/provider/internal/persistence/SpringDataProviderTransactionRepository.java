@@ -20,8 +20,7 @@ interface SpringDataProviderTransactionRepository extends JpaRepository<Provider
             UUID tenantId, String provider, String providerTransactionReference);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(
-            value = """
+    @Query(value = """
                     INSERT INTO provider.provider_transactions
                         (id, tenant_id, provider_event_id, provider, provider_transaction_reference,
                          business_reference, transaction_type, amount, currency, status, occurred_at,
@@ -31,8 +30,7 @@ interface SpringDataProviderTransactionRepository extends JpaRepository<Provider
                          :businessReference, :transactionType, :amount, :currency, :status, :occurredAt,
                          :recordedAt, :correlationId, :causationId)
                     ON CONFLICT DO NOTHING
-                    """,
-            nativeQuery = true)
+                    """, nativeQuery = true)
     int insertIfAbsent(
             @Param("id") UUID id,
             @Param("tenantId") UUID tenantId,

@@ -4,6 +4,5 @@ import dev.iamkavindu.reconflow.tenancy.TenantId;
 
 public interface ProviderTransactionQueries {
 
-    ProviderTransactionView getProviderTransaction(
-            TenantId tenantId, ProviderTransactionId providerTransactionId);
+    ProviderTransactionView getProviderTransaction(TenantId tenantId, ProviderTransactionId providerTransactionId);
 }

@@ -84,9 +84,7 @@ class ProviderTransactionApplicationServiceTest {
         public SaveResult saveIfAbsent(ProviderTransaction providerTransaction) {
             String key = key(providerTransaction);
             ProviderTransaction existing = transactions.putIfAbsent(key, providerTransaction);
-            return existing == null
-                    ? new SaveResult(providerTransaction, true)
-                    : new SaveResult(existing, false);
+            return existing == null ? new SaveResult(providerTransaction, true) : new SaveResult(existing, false);
         }
 
         @Override

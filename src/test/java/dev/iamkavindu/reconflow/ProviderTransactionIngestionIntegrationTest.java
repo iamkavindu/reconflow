@@ -41,6 +41,7 @@ class ProviderTransactionIngestionIntegrationTest {
     @Test
     void persistsOneLogicalProviderTransactionForDuplicateDelivery() {
         IngestProviderEventCommand command = new IngestProviderEventCommand(
+                CONFIGURED_TENANT,
                 "evt-integration-1001",
                 "stripe",
                 "pi-integration-1001",

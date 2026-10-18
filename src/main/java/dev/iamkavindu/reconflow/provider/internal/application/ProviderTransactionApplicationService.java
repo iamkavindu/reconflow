@@ -13,7 +13,6 @@ import dev.iamkavindu.reconflow.provider.internal.domain.ProviderMoney;
 import dev.iamkavindu.reconflow.provider.internal.domain.ProviderReference;
 import dev.iamkavindu.reconflow.provider.internal.domain.ProviderTransaction;
 import dev.iamkavindu.reconflow.provider.internal.domain.ProviderTransactionRepository;
-import dev.iamkavindu.reconflow.tenancy.CurrentTenant;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import java.time.Clock;
 import java.time.Instant;
@@ -28,17 +27,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProviderTransactionApplicationService implements ProviderTransactionCommands, ProviderTransactionQueries {
 
-    private final CurrentTenant currentTenant;
     private final ProviderTransactionRepository providerTransactionRepository;
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
 
     public ProviderTransactionApplicationService(
-            CurrentTenant currentTenant,
             ProviderTransactionRepository providerTransactionRepository,
             Clock clock,
             ApplicationEventPublisher eventPublisher) {
-        this.currentTenant = currentTenant;
         this.providerTransactionRepository = providerTransactionRepository;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
@@ -51,7 +47,7 @@ public class ProviderTransactionApplicationService implements ProviderTransactio
 
         ProviderTransaction providerTransaction = ProviderTransaction.record(
                 new ProviderTransactionId(UUID.randomUUID()),
-                currentTenant.tenantId(),
+                command.tenantId(),
                 new ProviderEventId(command.eventId()),
                 new ProviderCode(command.provider()),
                 new ProviderReference(command.providerTransactionReference()),

@@ -11,7 +11,6 @@ import dev.iamkavindu.reconflow.provider.ProviderTransactionView;
 import dev.iamkavindu.reconflow.provider.events.ProviderTransactionRecorded;
 import dev.iamkavindu.reconflow.provider.internal.domain.ProviderTransaction;
 import dev.iamkavindu.reconflow.provider.internal.domain.ProviderTransactionRepository;
-import dev.iamkavindu.reconflow.tenancy.CurrentTenant;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -35,10 +34,9 @@ class ProviderTransactionApplicationServiceTest {
     private static final Instant RECORDED_AT = Instant.parse("2026-10-10T09:25:03Z");
 
     private final InMemoryProviderTransactionRepository repository = new InMemoryProviderTransactionRepository();
-    private final CurrentTenant currentTenant = () -> TENANT_ID;
     private final List<Object> publishedEvents = new ArrayList<>();
     private final ProviderTransactionApplicationService service = new ProviderTransactionApplicationService(
-            currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
+            repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
 
     @Test
     void ingestsDuplicateDeliveryExactlyOnce() {
@@ -64,6 +62,7 @@ class ProviderTransactionApplicationServiceTest {
 
     private static IngestProviderEventCommand command(String eventId, String providerReference) {
         return new IngestProviderEventCommand(
+                TENANT_ID,
                 eventId,
                 "stripe",
                 providerReference,

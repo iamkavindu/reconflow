@@ -42,6 +42,9 @@ class ReconciliationJpaEntity {
     @Column(name = "rule_evaluations", columnDefinition = "text")
     private String ruleEvaluations;
 
+    @Column(name = "exception_decision", columnDefinition = "text")
+    private String exceptionDecision;
+
     protected ReconciliationJpaEntity() {}
 
     ReconciliationJpaEntity(
@@ -53,7 +56,8 @@ class ReconciliationJpaEntity {
             Instant expiresAt,
             UUID providerTransactionId,
             Instant matchedAt,
-            String ruleEvaluations) {
+            String ruleEvaluations,
+            String exceptionDecision) {
         this.id = id;
         this.tenantId = tenantId;
         this.transactionId = transactionId;
@@ -63,6 +67,11 @@ class ReconciliationJpaEntity {
         this.providerTransactionId = providerTransactionId;
         this.matchedAt = matchedAt;
         this.ruleEvaluations = ruleEvaluations;
+        this.exceptionDecision = exceptionDecision;
+    }
+
+    String exceptionDecision() {
+        return exceptionDecision;
     }
 
     UUID providerTransactionId() {

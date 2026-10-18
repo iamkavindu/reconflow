@@ -3,6 +3,7 @@ package dev.iamkavindu.reconflow.reconciliation.internal.persistence;
 import dev.iamkavindu.reconflow.provider.ProviderTransactionId;
 import dev.iamkavindu.reconflow.reconciliation.ReconciliationId;
 import dev.iamkavindu.reconflow.reconciliation.RuleEvaluation;
+import dev.iamkavindu.reconflow.reconciliation.internal.domain.ExceptionDecision;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.MatchDecision;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.MatchingWindow;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.Reconciliation;
@@ -13,7 +14,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 final class ReconciliationPersistenceMapper {
 
-    private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final JsonMapper JSON = JsonMapper.builder().findAndAddModules().build();
 
     private ReconciliationPersistenceMapper() {}
 
@@ -28,7 +29,10 @@ final class ReconciliationPersistenceMapper {
                 reconciliation.matchingWindow().expiresAt(),
                 decision == null ? null : decision.providerTransactionId().value(),
                 decision == null ? null : decision.matchedAt(),
-                decision == null ? null : JSON.writeValueAsString(decision.evaluations()));
+                decision == null ? null : JSON.writeValueAsString(decision.evaluations()),
+                reconciliation.exceptionDecision() == null
+                        ? null
+                        : JSON.writeValueAsString(reconciliation.exceptionDecision()));
     }
 
     static Reconciliation toDomain(ReconciliationJpaEntity entity) {
@@ -44,6 +48,9 @@ final class ReconciliationPersistenceMapper {
                                 new TenantId(entity.tenantId()),
                                 new ProviderTransactionId(entity.providerTransactionId()),
                                 entity.matchedAt(),
-                                Arrays.asList(JSON.readValue(entity.ruleEvaluations(), RuleEvaluation[].class))));
+                                Arrays.asList(JSON.readValue(entity.ruleEvaluations(), RuleEvaluation[].class))),
+                entity.exceptionDecision() == null
+                        ? null
+                        : JSON.readValue(entity.exceptionDecision(), ExceptionDecision.class));
     }
 }

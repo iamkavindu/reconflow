@@ -247,7 +247,9 @@ class AutomaticReconciliation {
         for (var transaction : internal) {
             if (transaction.type().name().equals(provider.type().name())) {
                 var existing = reconciliations.findByTenantIdAndTransactionId(tenantId, transaction.transactionId());
-                if (existing.isPresent() && existing.get().status() != ReconciliationStatus.PENDING) {
+                if (existing.isPresent()
+                        && (existing.get().status() == ReconciliationStatus.MATCHED
+                                || existing.get().status() == ReconciliationStatus.REVIEW_REQUIRED)) {
                     return true;
                 }
             }

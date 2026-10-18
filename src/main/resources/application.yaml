@@ -4,3 +4,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+reconflow:
+  tenancy:
+    current-tenant-id: 00000000-0000-0000-0000-000000000001

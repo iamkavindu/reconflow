@@ -153,7 +153,8 @@ class CaseManagementIntegrationTest {
     void optimisticLockingPreventsStaleCaseUpdatesFromLosingNotes() throws Exception {
         var opened = awaitCase(exception());
         var template = new TransactionTemplate(transactionManager);
-        var stale = template.execute(status -> repository.findByTenantIdAndId(TENANT, opened.caseId()).orElseThrow());
+        var stale = template.execute(status ->
+                repository.findByTenantIdAndId(TENANT, opened.caseId()).orElseThrow());
         commands.addNote(opened.caseId(), "First analyst's evidence");
         var staleUpdate = stale.startReview(Instant.now());
 

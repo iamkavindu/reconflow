@@ -24,9 +24,10 @@ class JpaCaseRepository implements CaseRepository {
                 investigationCase.tenantId().value(),
                 investigationCase.reconciliationId().value(),
                 investigationCase.openedAt());
-        var existing = findByTenantIdAndReconciliationId(
-                        investigationCase.tenantId(), investigationCase.reconciliationId())
-                .orElseThrow();
+        var tenant = investigationCase.tenantId();
+        var reconciliation = investigationCase.reconciliationId();
+        var found = findByTenantIdAndReconciliationId(tenant, reconciliation);
+        var existing = found.orElseThrow();
         return new OpenResult(existing, inserted == 1);
     }
 

@@ -5,11 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 public record Resolution(
-        ResolutionType type,
-        String reason,
-        String resolvedBy,
-        Instant resolvedAt,
-        List<String> evidenceReferences) {
+        ResolutionType type, String reason, String resolvedBy, Instant resolvedAt, List<String> evidenceReferences) {
 
     public Resolution {
         Objects.requireNonNull(type, "type must not be null");

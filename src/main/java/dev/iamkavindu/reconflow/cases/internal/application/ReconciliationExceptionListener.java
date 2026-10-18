@@ -16,11 +16,13 @@ class ReconciliationExceptionListener {
 
     @ApplicationModuleListener
     void on(ReconciliationReviewRequired event) {
-        opening.open(event.tenantId(), event.reconciliationId(), event.decidedAt(), event.correlationId(), event.eventId());
+        opening.open(
+                event.tenantId(), event.reconciliationId(), event.decidedAt(), event.correlationId(), event.eventId());
     }
 
     @ApplicationModuleListener
     void on(ReconciliationUnmatched event) {
-        opening.open(event.tenantId(), event.reconciliationId(), event.decidedAt(), event.correlationId(), event.eventId());
+        opening.open(
+                event.tenantId(), event.reconciliationId(), event.decidedAt(), event.correlationId(), event.eventId());
     }
 }

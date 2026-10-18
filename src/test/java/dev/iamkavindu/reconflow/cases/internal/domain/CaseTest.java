@@ -52,8 +52,8 @@ class CaseTest {
         var reconciliation = new ReconciliationId(UUID.randomUUID());
         var open = Case.open(id, tenant, reconciliation, NOW);
 
-        assertThatThrownBy(() -> new Case(
-                        id, tenant, reconciliation, CaseStatus.RESOLVED, NOW, NOW, List.of(), null, 0))
+        assertThatThrownBy(
+                        () -> new Case(id, tenant, reconciliation, CaseStatus.RESOLVED, NOW, NOW, List.of(), null, 0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> open.startReview(NOW.minusSeconds(1))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new Resolution(ResolutionType.MATCH_CONFIRMED, " ", "analyst", NOW, List.of()))

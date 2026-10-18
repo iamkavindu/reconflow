@@ -55,7 +55,8 @@ public record Case(
         requireMutable(note.addedAt());
         var updatedNotes = new ArrayList<>(notes);
         updatedNotes.add(note);
-        return new Case(caseId, tenantId, reconciliationId, status, openedAt, note.addedAt(), updatedNotes, null, version);
+        return new Case(
+                caseId, tenantId, reconciliationId, status, openedAt, note.addedAt(), updatedNotes, null, version);
     }
 
     public Case resolve(Resolution resolution) {

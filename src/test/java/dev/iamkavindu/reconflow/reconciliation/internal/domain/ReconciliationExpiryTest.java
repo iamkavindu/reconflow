@@ -35,8 +35,7 @@ class ReconciliationExpiryTest {
                 START.plusSeconds(601),
                 List.of(new RuleEvaluation("AMOUNT", true, "100", "100")));
 
-        assertThat(pending.match(match, START.plusSeconds(30)).status())
-                .isEqualTo(ReconciliationStatus.MATCHED);
+        assertThat(pending.match(match, START.plusSeconds(30)).status()).isEqualTo(ReconciliationStatus.MATCHED);
         assertThatThrownBy(() -> pending.match(match, START.plusSeconds(600)))
                 .isInstanceOf(IllegalArgumentException.class);
     }

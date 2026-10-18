@@ -107,9 +107,11 @@ class AutomaticReconciliation {
                     .filter(candidate ->
                             candidate.type().name().equals(transaction.type().name()))
                     .toList();
-            var candidates = (sameType.isEmpty() ? external : sameType).stream()
-                    .filter(candidate -> availableProvider(tenantId, candidate.providerTransactionId(), reconciliation))
-                    .toList();
+            var candidates = (sameType.isEmpty() ? external : sameType)
+                    .stream()
+                            .filter(candidate ->
+                                    availableProvider(tenantId, candidate.providerTransactionId(), reconciliation))
+                            .toList();
             long internalCount = internal.stream()
                     .filter(candidate -> candidate.type() == transaction.type())
                     .count();
@@ -235,8 +237,9 @@ class AutomaticReconciliation {
 
     private boolean availableProvider(TenantId tenantId, ProviderTransactionId providerId, Reconciliation current) {
         var links = reconciliations.findByTenantIdAndProviderTransactionId(tenantId, providerId);
-        return links.stream().allMatch(link -> link.reconciliationId().equals(current.reconciliationId())
-                || (link.status() == ReconciliationStatus.PENDING && link.transactionId() == null));
+        return links.stream()
+                .allMatch(link -> link.reconciliationId().equals(current.reconciliationId())
+                        || (link.status() == ReconciliationStatus.PENDING && link.transactionId() == null));
     }
 
     private boolean alreadyAccountedFor(
@@ -294,7 +297,8 @@ class AutomaticReconciliation {
         var providers = reconciliation.providerOriginId() == null
                 ? List.<ProviderTransactionId>of()
                 : List.of(reconciliation.providerOriginId());
-        var decision = new ExceptionDecision(reconciliation.tenantId(), providers, now, List.of(), List.of(discrepancy));
+        var decision =
+                new ExceptionDecision(reconciliation.tenantId(), providers, now, List.of(), List.of(discrepancy));
         var unmatched = reconciliations.save(reconciliation.expire(decision));
         events.publishEvent(new ReconciliationUnmatched(
                 UUID.randomUUID(),

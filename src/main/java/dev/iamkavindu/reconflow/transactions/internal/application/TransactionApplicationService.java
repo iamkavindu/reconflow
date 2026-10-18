@@ -1,5 +1,7 @@
 package dev.iamkavindu.reconflow.transactions.internal.application;
 
+import dev.iamkavindu.reconflow.tenancy.Actor;
+import dev.iamkavindu.reconflow.tenancy.CurrentActor;
 import dev.iamkavindu.reconflow.tenancy.CurrentTenant;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import dev.iamkavindu.reconflow.transactions.RecordTransactionCommand;
@@ -26,16 +28,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionApplicationService implements TransactionCommands, TransactionQueries {
 
     private final CurrentTenant currentTenant;
+    private final CurrentActor currentActor;
     private final TransactionRepository transactionRepository;
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
 
     public TransactionApplicationService(
             CurrentTenant currentTenant,
+            CurrentActor currentActor,
             TransactionRepository transactionRepository,
             Clock clock,
             ApplicationEventPublisher eventPublisher) {
         this.currentTenant = currentTenant;
+        this.currentActor = currentActor;
         this.transactionRepository = transactionRepository;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
@@ -45,6 +50,7 @@ public class TransactionApplicationService implements TransactionCommands, Trans
     @Transactional
     public TransactionView recordTransaction(RecordTransactionCommand command) {
         Objects.requireNonNull(command, "command must not be null");
+        String recordedBy = currentActor.optionalActor().map(Actor::subject).orElse(null);
 
         Transaction transaction = Transaction.record(
                 new TransactionId(UUID.randomUUID()),
@@ -63,7 +69,8 @@ public class TransactionApplicationService implements TransactionCommands, Trans
                 saved.transactionId(),
                 saved.businessReference().value(),
                 saved.recordedAt(),
-                UUID.randomUUID()));
+                UUID.randomUUID(),
+                recordedBy));
 
         return toView(saved);
     }

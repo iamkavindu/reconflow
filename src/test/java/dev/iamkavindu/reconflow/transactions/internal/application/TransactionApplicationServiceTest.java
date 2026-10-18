@@ -3,8 +3,10 @@ package dev.iamkavindu.reconflow.transactions.internal.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.iamkavindu.reconflow.tenancy.Actor;
 import dev.iamkavindu.reconflow.tenancy.CurrentTenant;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
+import dev.iamkavindu.reconflow.tenancy.UserRole;
 import dev.iamkavindu.reconflow.transactions.RecordTransactionCommand;
 import dev.iamkavindu.reconflow.transactions.TransactionId;
 import dev.iamkavindu.reconflow.transactions.TransactionStatus;
@@ -40,7 +42,11 @@ class TransactionApplicationServiceTest {
     private final CurrentTenant currentTenant = () -> TENANT_ID;
     private final List<Object> publishedEvents = new ArrayList<>();
     private final TransactionApplicationService service = new TransactionApplicationService(
-            currentTenant, repository, Clock.fixed(CLOCK_INSTANT, ZoneOffset.UTC), publishedEvents::add);
+            currentTenant,
+            () -> new Actor(TENANT_ID, "analyst", UserRole.ANALYST),
+            repository,
+            Clock.fixed(CLOCK_INSTANT, ZoneOffset.UTC),
+            publishedEvents::add);
 
     @Test
     void recordsTransactionUsingTrustedTenantAndApplicationControlledValues() {
@@ -61,6 +67,7 @@ class TransactionApplicationServiceTest {
         assertThat(recorded.status()).isEqualTo(TransactionStatus.RECORDED);
         assertThat(recorded.recordedAt()).isEqualTo(RECORDED_AT);
         assertThat(publishedEvents).singleElement().isInstanceOf(TransactionRecorded.class);
+        assertThat(((TransactionRecorded) publishedEvents.getFirst()).recordedBy()).isEqualTo("analyst");
     }
 
     @Test

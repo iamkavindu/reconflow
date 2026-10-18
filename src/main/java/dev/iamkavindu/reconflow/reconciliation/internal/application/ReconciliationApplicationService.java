@@ -34,6 +34,7 @@ class ReconciliationApplicationService implements ReconciliationQueries {
     }
 
     private static ReconciliationView toView(Reconciliation reconciliation) {
+        var decision = reconciliation.matchDecision();
         return new ReconciliationView(
                 reconciliation.reconciliationId(),
                 reconciliation.tenantId(),
@@ -41,10 +42,8 @@ class ReconciliationApplicationService implements ReconciliationQueries {
                 reconciliation.status(),
                 reconciliation.matchingWindow().startedAt(),
                 reconciliation.matchingWindow().expiresAt(),
-                reconciliation.matchDecision() == null
-                        ? null
-                        : reconciliation.matchDecision().providerTransactionId(),
-                reconciliation.matchDecision() == null ? null : reconciliation.matchDecision().matchedAt(),
-                reconciliation.matchDecision() == null ? List.of() : reconciliation.matchDecision().evaluations());
+                decision == null ? null : decision.providerTransactionId(),
+                decision == null ? null : decision.matchedAt(),
+                decision == null ? List.of() : decision.evaluations());
     }
 }

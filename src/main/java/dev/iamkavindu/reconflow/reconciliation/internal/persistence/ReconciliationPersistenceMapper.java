@@ -18,6 +18,7 @@ final class ReconciliationPersistenceMapper {
     private ReconciliationPersistenceMapper() {}
 
     static ReconciliationJpaEntity toEntity(Reconciliation reconciliation) {
+        var decision = reconciliation.matchDecision();
         return new ReconciliationJpaEntity(
                 reconciliation.reconciliationId().value(),
                 reconciliation.tenantId().value(),
@@ -25,13 +26,9 @@ final class ReconciliationPersistenceMapper {
                 reconciliation.status(),
                 reconciliation.matchingWindow().startedAt(),
                 reconciliation.matchingWindow().expiresAt(),
-                reconciliation.matchDecision() == null
-                        ? null
-                        : reconciliation.matchDecision().providerTransactionId().value(),
-                reconciliation.matchDecision() == null ? null : reconciliation.matchDecision().matchedAt(),
-                reconciliation.matchDecision() == null
-                        ? null
-                        : JSON.writeValueAsString(reconciliation.matchDecision().evaluations()));
+                decision == null ? null : decision.providerTransactionId().value(),
+                decision == null ? null : decision.matchedAt(),
+                decision == null ? null : JSON.writeValueAsString(decision.evaluations()));
     }
 
     static Reconciliation toDomain(ReconciliationJpaEntity entity) {

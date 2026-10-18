@@ -78,7 +78,8 @@ class AutomaticReconciliation {
             return;
         }
 
-        var evaluations = evaluator.evaluate(transaction, providerTransaction, policy.maximumTransactionTimeDifference());
+        var evaluations =
+                evaluator.evaluate(transaction, providerTransaction, policy.maximumTransactionTimeDifference());
         if (evaluations.stream().anyMatch(evaluation -> !evaluation.satisfied())) {
             return;
         }

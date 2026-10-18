@@ -26,8 +26,8 @@ class ReconciliationEvaluatorTest {
 
     @Test
     void explainsAllSixSatisfiedRulesAndComparesAmountsNumerically() {
-        var results = evaluator.evaluate(
-                transaction(), provider(TENANT, "100.0000", "USD", TIME), Duration.ofMinutes(10));
+        var results =
+                evaluator.evaluate(transaction(), provider(TENANT, "100.0000", "USD", TIME), Duration.ofMinutes(10));
 
         assertThat(results).hasSize(6).allMatch(result -> result.satisfied());
         assertThat(results)
@@ -68,7 +68,8 @@ class ReconciliationEvaluatorTest {
                 TIME);
     }
 
-    private static ProviderTransactionView provider(TenantId tenant, String amount, String currency, Instant occurredAt) {
+    private static ProviderTransactionView provider(
+            TenantId tenant, String amount, String currency, Instant occurredAt) {
         return new ProviderTransactionView(
                 new ProviderTransactionId(UUID.randomUUID()),
                 tenant,

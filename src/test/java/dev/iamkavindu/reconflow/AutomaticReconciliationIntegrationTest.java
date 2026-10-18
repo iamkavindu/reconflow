@@ -76,7 +76,8 @@ class AutomaticReconciliationIntegrationTest {
         var duplicate = ingest(reference);
 
         assertThat(duplicate).isEqualTo(provider);
-        assertThat(reconciliations.getReconciliation(TENANT, transaction.transactionId())).isEqualTo(first);
+        assertThat(reconciliations.getReconciliation(TENANT, transaction.transactionId()))
+                .isEqualTo(first);
         assertThat(jdbc.queryForObject(
                         "SELECT count(*) FROM reconciliation.reconciliations WHERE tenant_id = ? AND transaction_id = ?",
                         Integer.class,
@@ -90,7 +91,8 @@ class AutomaticReconciliationIntegrationTest {
         String reference = "ORD-" + UUID.randomUUID();
         record(reference);
 
-        assertThat(candidates.findByBusinessReference(new TenantId(UUID.randomUUID()), reference)).isEmpty();
+        assertThat(candidates.findByBusinessReference(new TenantId(UUID.randomUUID()), reference))
+                .isEmpty();
         assertThat(candidates.findByBusinessReference(TENANT, reference)).hasSize(1);
     }
 

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "reconflow.kafka.enabled=false")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=false", "reconflow.security.enabled=false"})
 class AutomaticReconciliationIntegrationTest {
 
     private static final TenantId TENANT = new TenantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));

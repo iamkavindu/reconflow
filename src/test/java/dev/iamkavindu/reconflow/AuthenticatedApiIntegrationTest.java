@@ -212,70 +212,10 @@ class AuthenticatedApiIntegrationTest {
             throws JOSEException {
         var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(subject).audience(audience)
                 .issueTime(Date.from(Instant.now().minusSeconds(600))).expirationTime(Date.from(expiry))
-                .claim("tenant_id", tenant).claim("realm_a…892 tokens truncated… ingest(reference);
-
-        assertThat(duplicate).isEqualTo(provider);
-        assertThat(reconciliations.getReconciliation(TENANT, transaction.transactionId()))
-                .isEqualTo(first);
-        assertThat(jdbc.queryForObject(
-                        "SELECT count(*) FROM reconciliation.reconciliations WHERE tenant_id = ? AND transaction_id = ?",
-                        Integer.class,
-                        TENANT.value(),
-                        transaction.transactionId().value()))
-                .isEqualTo(1);
-    }
-
-    @Test
-    void candidateQueriesDoNotExposeAnotherTenantsRecords() {
-        String reference = "ORD-" + UUID.randomUUID();
-        record(reference);
-
-        assertThat(candidates.findByBusinessReference(new TenantId(UUID.randomUUID()), reference))
-                .isEmpty();
-        assertThat(candidates.findByBusinessReference(TENANT, reference)).hasSize(1);
-    }
-
-    private TransactionView record(String reference) {
-        return transactions.recordTransaction(new RecordTransactionCommand(
-                reference, TransactionType.PAYMENT, new BigDecimal("100.00"), Currency.getInstance("USD"), TIME));
-    }
-
-    private ProviderTransactionView ingest(String reference) {
-        return providerTransactions.ingestProviderEvent(new IngestProviderEventCommand(
-                TENANT,
-                "evt-" + reference,
-                "stripe",
-                "pi-" + reference,
-                reference,
-                ProviderTransactionType.PAYMENT,
-                new BigDecimal("100.00"),
-                Currency.getInstance("USD"),
-                ProviderTransactionStatus.SUCCEEDED,
-                TIME,
-                UUID.randomUUID(),
-                UUID.randomUUID()));
-    }
-
-    private ReconciliationView awaitMatch(TransactionView transaction) throws InterruptedException {
-        Instant deadline = Instant.now().plusSeconds(10);
-        while (Instant.now().isBefore(deadline)) {
-            try {
-                var result = reconciliations.getReconciliation(TENANT, transaction.transactionId());
-                if (result.status() == ReconciliationStatus.MATCHED) {
-                    return result;
-                }
-            } catch (NoSuchElementException ignored) {
-                // The module listener commits the reconciliation in its own transaction.
-            }
-            Thread.sleep(25);
-        }
-        throw new AssertionError("reconciliation did not become MATCHED within ten seconds");
-    }
-
-    private static void assertMatch(ReconciliationView result, ProviderTransactionView provider) {
-        assertThat(result.status()).isEqualTo(ReconciliationStatus.MATCHED);
-        assertThat(result.providerTransactionId()).isEqualTo(provider.providerTransactionId());
-        assertThat(result.matchedAt()).isNotNull();
-        assertThat(result.ruleEvaluations()).hasSize(6).allMatch(rule -> rule.satisfied());
+                .claim("tenant_id", tenant).claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
+                .build();
+        var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("test-key").build(), claims);
+        jwt.sign(new RSASSASigner(key));
+        return "Bearer " + jwt.serialize();
     }
 }

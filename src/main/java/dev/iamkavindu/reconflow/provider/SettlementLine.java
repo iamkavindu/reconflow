@@ -12,9 +12,12 @@ public record SettlementLine(
         Objects.requireNonNull(feeAmount);
         Objects.requireNonNull(netAmount);
         providerTransactionReference = providerTransactionReference.strip();
-        if (providerTransactionReference.isBlank() || providerTransactionReference.length() > 200
-                || feeAmount.signum() < 0 || grossAmount.subtract(feeAmount).compareTo(netAmount) != 0) {
-            throw new IllegalArgumentException("a settlement line requires a reference and gross minus fees equal to net");
+        if (providerTransactionReference.isBlank()
+                || providerTransactionReference.length() > 200
+                || feeAmount.signum() < 0
+                || grossAmount.subtract(feeAmount).compareTo(netAmount) != 0) {
+            throw new IllegalArgumentException(
+                    "a settlement line requires a reference and gross minus fees equal to net");
         }
     }
 }

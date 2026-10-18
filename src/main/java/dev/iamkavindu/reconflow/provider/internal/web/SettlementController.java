@@ -41,9 +41,16 @@ class SettlementController {
     SettlementView importSettlement(@Valid @RequestBody ImportRequest request) {
         var actor = currentActor.actor();
         actor.requireAnalyst();
-        var command = new ImportSettlementCommand(actor.tenantId(), request.provider(), request.providerSettlementReference(),
-                Currency.getInstance(request.currency()), request.grossAmount(), request.feeAmount(), request.netAmount(),
-                request.settledAt(), request.lines());
+        var command = new ImportSettlementCommand(
+                actor.tenantId(),
+                request.provider(),
+                request.providerSettlementReference(),
+                Currency.getInstance(request.currency()),
+                request.grossAmount(),
+                request.feeAmount(),
+                request.netAmount(),
+                request.settledAt(),
+                request.lines());
         return commands.importSettlement(command);
     }
 

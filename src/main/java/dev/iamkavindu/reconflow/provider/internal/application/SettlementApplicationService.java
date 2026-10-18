@@ -36,8 +36,13 @@ class SettlementApplicationService implements SettlementCommands {
     private final CurrentActor currentActor;
     private final ApplicationEventPublisher events;
 
-    SettlementApplicationService(SettlementRepository repository, SqlSettlementQueries queries, JsonMapper json,
-            Clock clock, CurrentActor currentActor, ApplicationEventPublisher events) {
+    SettlementApplicationService(
+            SettlementRepository repository,
+            SqlSettlementQueries queries,
+            JsonMapper json,
+            Clock clock,
+            CurrentActor currentActor,
+            ApplicationEventPublisher events) {
         this.repository = repository;
         this.queries = queries;
         this.json = json;
@@ -60,13 +65,18 @@ class SettlementApplicationService implements SettlementCommands {
         String provider = new ProviderCode(command.provider()).value();
         String reference = new ProviderReference(command.providerSettlementReference()).value();
         int digits = Objects.requireNonNull(command.currency()).getDefaultFractionDigits();
-        if (digits < 0 || digits > 4 || command.lines().isEmpty() || command.lines().size() > 1000) {
+        if (digits < 0
+                || digits > 4
+                || command.lines().isEmpty()
+                || command.lines().size() > 1000) {
             throw new IllegalArgumentException("settlement requires a supported currency and 1 to 1000 source lines");
         }
-        var lines = command.lines().stream().map(line -> new SettlementLine(
-                line.providerTransactionReference(), money(line.grossAmount(), digits),
-                money(line.feeAmount(), digits), money(line.netAmount(), digits)))
-                .sorted(Comparator.comparing(SettlementLine::providerTransactionReference)).toList();
+        var lines = command.lines().stream()
+                .map(line -> new SettlementLine(
+                        line.providerTransactionReference(), money(line.grossAmount(), digits),
+                        money(line.feeAmount(), digits), money(line.netAmount(), digits)))
+                .sorted(Comparator.comparing(SettlementLine::providerTransactionReference))
+                .toList();
         var references = new HashSet<String>();
         for (var line : lines) {
             if (!references.add(line.providerTransactionReference())) {
@@ -76,7 +86,8 @@ class SettlementApplicationService implements SettlementCommands {
         BigDecimal gross = money(command.grossAmount(), digits);
         BigDecimal fee = money(command.feeAmount(), digits);
         BigDecimal net = money(command.netAmount(), digits);
-        BigDecimal totalGross = lines.stream().map(SettlementLine::grossAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalGross =
+                lines.stream().map(SettlementLine::grossAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalFee = lines.stream().map(SettlementLine::feeAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalNet = lines.stream().map(SettlementLine::netAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         if (gross.compareTo(totalGross) != 0 || fee.compareTo(totalFee) != 0 || net.compareTo(totalNet) != 0) {
@@ -85,17 +96,35 @@ class SettlementApplicationService implements SettlementCommands {
         Instant settledAt = Objects.requireNonNull(command.settledAt()).truncatedTo(ChronoUnit.MICROS);
         Instant recordedAt = Instant.now(clock).truncatedTo(ChronoUnit.MICROS);
         var id = new SettlementId(UUID.randomUUID());
-        int inserted = repository.insertIfAbsent(id.value(), command.tenantId().value(), provider, reference,
-                command.currency().getCurrencyCode(), gross, fee, net, settledAt, recordedAt, json.writeValueAsString(lines));
+        int inserted = repository.insertIfAbsent(
+                id.value(),
+                command.tenantId().value(),
+                provider,
+                reference,
+                command.currency().getCurrencyCode(),
+                gross,
+                fee,
+                net,
+                settledAt,
+                recordedAt,
+                json.writeValueAsString(lines));
         var saved = queries.forSource(command.tenantId(), provider, reference);
-        if (!saved.currency().equals(command.currency().getCurrencyCode()) || !saved.settledAt().equals(settledAt)
-                || saved.grossAmount().compareTo(gross) != 0 || saved.feeAmount().compareTo(fee) != 0
-                || saved.netAmount().compareTo(net) != 0 || !saved.lines().equals(lines)) {
+        if (!saved.currency().equals(command.currency().getCurrencyCode())
+                || !saved.settledAt().equals(settledAt)
+                || saved.grossAmount().compareTo(gross) != 0
+                || saved.feeAmount().compareTo(fee) != 0
+                || saved.netAmount().compareTo(net) != 0
+                || !saved.lines().equals(lines)) {
             throw new IllegalStateException("a different immutable settlement already uses this source identity");
         }
         if (inserted == 1) {
-            events.publishEvent(new SettlementImported(UUID.randomUUID(), saved.tenantId(), saved.settlementId(),
-                    recordedAt, actor.map(Actor::subject).orElse(null), UUID.randomUUID()));
+            events.publishEvent(new SettlementImported(
+                    UUID.randomUUID(),
+                    saved.tenantId(),
+                    saved.settlementId(),
+                    recordedAt,
+                    actor.map(Actor::subject).orElse(null),
+                    UUID.randomUUID()));
         }
         return saved;
     }

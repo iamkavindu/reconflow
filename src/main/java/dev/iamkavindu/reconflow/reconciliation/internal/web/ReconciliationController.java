@@ -8,8 +8,8 @@ import dev.iamkavindu.reconflow.reconciliation.ReconciliationQueries;
 import dev.iamkavindu.reconflow.reconciliation.ReconciliationView;
 import dev.iamkavindu.reconflow.tenancy.CurrentActor;
 import dev.iamkavindu.reconflow.transactions.TransactionId;
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +21,8 @@ class ReconciliationController {
     private final CurrentActor currentActor;
     private final ReconciliationEvidenceQueries evidence;
 
-    ReconciliationController(ReconciliationQueries queries, CurrentActor currentActor, ReconciliationEvidenceQueries evidence) {
+    ReconciliationController(
+            ReconciliationQueries queries, CurrentActor currentActor, ReconciliationEvidenceQueries evidence) {
         this.queries = queries;
         this.currentActor = currentActor;
         this.evidence = evidence;

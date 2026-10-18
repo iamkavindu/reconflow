@@ -19,10 +19,15 @@ public interface SettlementRepository extends Repository<SettlementJpaEntity, UU
                     ON CONFLICT (tenant_id, provider, provider_settlement_reference) DO NOTHING
                     """, nativeQuery = true)
     int insertIfAbsent(
-            @Param("id") UUID id, @Param("tenant") UUID tenantId,
-            @Param("provider") String provider, @Param("reference") String reference,
-            @Param("currency") String currency, @Param("gross") BigDecimal gross,
-            @Param("fee") BigDecimal fee, @Param("net") BigDecimal net,
-            @Param("settled") Instant settledAt, @Param("recorded") Instant recordedAt,
+            @Param("id") UUID id,
+            @Param("tenant") UUID tenantId,
+            @Param("provider") String provider,
+            @Param("reference") String reference,
+            @Param("currency") String currency,
+            @Param("gross") BigDecimal gross,
+            @Param("fee") BigDecimal fee,
+            @Param("net") BigDecimal net,
+            @Param("settled") Instant settledAt,
+            @Param("recorded") Instant recordedAt,
             @Param("lines") String lines);
 }

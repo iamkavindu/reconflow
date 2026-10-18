@@ -31,6 +31,9 @@ class ReconciliationSettlementEvidence implements ReconciliationEvidenceQueries 
         if (reconciliation.providerOriginId() != null) {
             ids.add(reconciliation.providerOriginId());
         }
-        return ids.stream().flatMap(id -> settlements.forProviderTransaction(tenantId, id).stream()).distinct().toList();
+        return ids.stream()
+                .flatMap(id -> settlements.forProviderTransaction(tenantId, id).stream())
+                .distinct()
+                .toList();
     }
 }

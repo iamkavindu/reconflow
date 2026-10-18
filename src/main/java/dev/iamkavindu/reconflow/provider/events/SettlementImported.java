@@ -6,5 +6,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record SettlementImported(
-        UUID eventId, TenantId tenantId, SettlementId settlementId, Instant recordedAt,
-        String recordedBy, UUID correlationId) {}
+        UUID eventId,
+        TenantId tenantId,
+        SettlementId settlementId,
+        Instant recordedAt,
+        String recordedBy,
+        UUID correlationId) {}

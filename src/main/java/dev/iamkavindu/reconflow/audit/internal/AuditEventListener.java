@@ -59,8 +59,16 @@ class AuditEventListener {
 
     @ApplicationModuleListener
     void on(SettlementImported event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.SETTLEMENT, event.settlementId().value(),
-                "SETTLEMENT_IMPORTED", event.recordedBy(), event.recordedAt(), event.correlationId(), null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.SETTLEMENT,
+                event.settlementId().value(),
+                "SETTLEMENT_IMPORTED",
+                event.recordedBy(),
+                event.recordedAt(),
+                event.correlationId(),
+                null);
     }
 
     @ApplicationModuleListener

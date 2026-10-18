@@ -83,12 +83,18 @@ class SettlementEvidenceIntegrationTest {
             assertThat(second.get()).isEqualTo(saved);
             assertThat(saved.netAmount()).isEqualByComparingTo("96.80");
             assertThatThrownBy(() -> settlements.importSettlement(
-                    command(TENANT, reference, providerReference, "101.00", "4.20", "96.80")))
+                            command(TENANT, reference, providerReference, "101.00", "4.20", "96.80")))
                     .isInstanceOf(IllegalStateException.class);
-            assertThat(settlementQueries.getSettlement(TENANT, saved.settlementId())).isEqualTo(saved);
-            await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
-                    assertThat(audit.forResource(TENANT, AuditResourceType.SETTLEMENT,
-                            saved.settlementId().value(), Long.MAX_VALUE, 50)).hasSize(1));
+            assertThat(settlementQueries.getSettlement(TENANT, saved.settlementId()))
+                    .isEqualTo(saved);
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(audit.forResource(
+                                    TENANT,
+                                    AuditResourceType.SETTLEMENT,
+                                    saved.settlementId().value(),
+                                    Long.MAX_VALUE,
+                                    50))
+                            .hasSize(1));
         }
     }
 
@@ -104,10 +110,13 @@ class SettlementEvidenceIntegrationTest {
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             var reconciliation = reconciliations.getReconciliation(TENANT, internal.transactionId());
             assertThat(reconciliation.status()).isEqualTo(ReconciliationStatus.REVIEW_REQUIRED);
-            assertThat(reconciliation.discrepancies()).extracting(Discrepancy::type)
+            assertThat(reconciliation.discrepancies())
+                    .extracting(Discrepancy::type)
                     .contains(DiscrepancyType.AMOUNT_MISMATCH, DiscrepancyType.FEE_VARIANCE);
-            assertThat(evidence.settlements(TENANT, reconciliation.reconciliationId())).containsExactly(settlement);
-            assertThat(cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId()).status())
+            assertThat(evidence.settlements(TENANT, reconciliation.reconciliationId()))
+                    .containsExactly(settlement);
+            assertThat(cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId())
+                            .status())
                     .isEqualTo(CaseStatus.OPEN);
         });
         assertThat(settlementQueries.forProviderTransaction(TENANT, external.providerTransactionId()))
@@ -121,8 +130,10 @@ class SettlementEvidenceIntegrationTest {
         var internal = transactions.recordTransaction(new RecordTransactionCommand(
                 reference, TransactionType.PAYMENT, new BigDecimal("100.00"), Currency.getInstance("USD"), TIME));
         var external = ingest(TENANT, reference, providerReference);
-        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
-                assertThat(reconciliations.getReconciliation(TENANT, internal.transactionId()).status())
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> assertThat(reconciliations
+                                .getReconciliation(TENANT, internal.transactionId())
+                                .status())
                         .isEqualTo(ReconciliationStatus.REVIEW_REQUIRED));
         var original = reconciliations.getReconciliation(TENANT, internal.transactionId());
         assertThat(original.discrepancies()).extracting(Discrepancy::type).doesNotContain(DiscrepancyType.FEE_VARIANCE);
@@ -131,7 +142,8 @@ class SettlementEvidenceIntegrationTest {
         var otherSettlement = settlements.importSettlement(
                 command(OTHER, "SET-" + reference, providerReference, "100.00", "3.20", "96.80"));
         var otherProvider = ingest(OTHER, reference, providerReference);
-        assertThat(reconciliations.getReconciliation(TENANT, internal.transactionId())).isEqualTo(original);
+        assertThat(reconciliations.getReconciliation(TENANT, internal.transactionId()))
+                .isEqualTo(original);
         assertThat(evidence.settlements(TENANT, original.reconciliationId())).containsExactly(settlement);
         assertThat(settlementQueries.forProviderTransaction(OTHER, otherProvider.providerTransactionId()))
                 .containsExactly(otherSettlement);
@@ -146,29 +158,55 @@ class SettlementEvidenceIntegrationTest {
     @Test
     void rejectsUnbalancedDuplicateAndOverprecisionLines() {
         String reference = UUID.randomUUID().toString();
-        assertThatThrownBy(() -> new SettlementLine(reference,
-                new BigDecimal("100.00"), new BigDecimal("3.20"), new BigDecimal("97.00")))
+        assertThatThrownBy(() -> new SettlementLine(
+                        reference, new BigDecimal("100.00"), new BigDecimal("3.20"), new BigDecimal("97.00")))
                 .isInstanceOf(IllegalArgumentException.class);
         var source = command(TENANT, reference, reference, "100.00", "3.20", "96.80");
         assertThatThrownBy(() -> settlements.importSettlement(new ImportSettlementCommand(
-                TENANT, "stripe", reference, Currency.getInstance("USD"), source.grossAmount(), source.feeAmount(),
-                source.netAmount(), TIME, List.of(source.lines().getFirst(), source.lines().getFirst()))))
+                        TENANT,
+                        "stripe",
+                        reference,
+                        Currency.getInstance("USD"),
+                        source.grossAmount(),
+                        source.feeAmount(),
+                        source.netAmount(),
+                        TIME,
+                        List.of(source.lines().getFirst(), source.lines().getFirst()))))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> settlements.importSettlement(
-                command(TENANT, reference, reference, "100.001", "3.201", "96.800")))
+                        command(TENANT, reference, reference, "100.001", "3.201", "96.800")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private ImportSettlementCommand command(TenantId tenant, String reference, String providerReference,
-            String gross, String fee, String net) {
-        var line = new SettlementLine(providerReference, new BigDecimal(gross), new BigDecimal(fee), new BigDecimal(net));
-        return new ImportSettlementCommand(tenant, "stripe", reference, Currency.getInstance("USD"),
-                line.grossAmount(), line.feeAmount(), line.netAmount(), TIME, List.of(line));
+    private ImportSettlementCommand command(
+            TenantId tenant, String reference, String providerReference, String gross, String fee, String net) {
+        var line =
+                new SettlementLine(providerReference, new BigDecimal(gross), new BigDecimal(fee), new BigDecimal(net));
+        return new ImportSettlementCommand(
+                tenant,
+                "stripe",
+                reference,
+                Currency.getInstance("USD"),
+                line.grossAmount(),
+                line.feeAmount(),
+                line.netAmount(),
+                TIME,
+                List.of(line));
     }
 
     private ProviderTransactionView ingest(TenantId tenant, String reference, String providerReference) {
-        return provider.ingestProviderEvent(new IngestProviderEventCommand(tenant, "evt-" + reference, "stripe",
-                providerReference, reference, ProviderTransactionType.PAYMENT, new BigDecimal("96.80"),
-                Currency.getInstance("USD"), ProviderTransactionStatus.SUCCEEDED, TIME, UUID.randomUUID(), UUID.randomUUID()));
+        return provider.ingestProviderEvent(new IngestProviderEventCommand(
+                tenant,
+                "evt-" + reference,
+                "stripe",
+                providerReference,
+                reference,
+                ProviderTransactionType.PAYMENT,
+                new BigDecimal("96.80"),
+                Currency.getInstance("USD"),
+                ProviderTransactionStatus.SUCCEEDED,
+                TIME,
+                UUID.randomUUID(),
+                UUID.randomUUID()));
     }
 }

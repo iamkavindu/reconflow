@@ -1,6 +1,7 @@
 package dev.iamkavindu.reconflow.reconciliation.internal.application;
 
 import dev.iamkavindu.reconflow.provider.ProviderTransactionId;
+import dev.iamkavindu.reconflow.reconciliation.ReconciliationId;
 import dev.iamkavindu.reconflow.reconciliation.ReconciliationQueries;
 import dev.iamkavindu.reconflow.reconciliation.ReconciliationView;
 import dev.iamkavindu.reconflow.reconciliation.RuleEvaluation;
@@ -59,6 +60,29 @@ class ReconciliationApplicationService implements ReconciliationQueries {
                 evaluations,
                 decidedAt,
                 comparedProviders,
-                exception == null ? List.of() : exception.discrepancies());
+                exception == null ? List.of() : exception.discrepancies(),
+                reconciliation.businessReference(),
+                reconciliation.providerOriginId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReconciliationView getReconciliationById(TenantId tenantId, ReconciliationId reconciliationId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(reconciliationId, "reconciliationId must not be null");
+        return reconciliationRepository.findByTenantIdAndId(tenantId, reconciliationId)
+                .map(ReconciliationApplicationService::toView)
+                .orElseThrow(() -> new NoSuchElementException("Reconciliation not found"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReconciliationView getProviderReconciliation(TenantId tenantId, ProviderTransactionId providerTransactionId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(providerTransactionId, "providerTransactionId must not be null");
+        return reconciliationRepository.findByTenantIdAndProviderTransactionId(tenantId, providerTransactionId).stream()
+                .findFirst()
+                .map(ReconciliationApplicationService::toView)
+                .orElseThrow(() -> new NoSuchElementException("Reconciliation not found"));
     }
 }

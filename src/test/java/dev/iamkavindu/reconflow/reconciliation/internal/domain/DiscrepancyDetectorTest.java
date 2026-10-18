@@ -45,7 +45,8 @@ class DiscrepancyDetectorTest {
                 new ReconciliationId(UUID.randomUUID()),
                 tenant,
                 new TransactionId(UUID.randomUUID()),
-                new MatchingWindow(NOW.minusSeconds(1), NOW.plusSeconds(600)));
+                new MatchingWindow(NOW.minusSeconds(1), NOW.plusSeconds(600)),
+                "ORD-1");
         var discrepancies = detector.detect(
                 List.of(new RuleEvaluation("AMOUNT", false, "100", "90")), TransactionType.PAYMENT, NOW);
         var decision = new ExceptionDecision(tenant, List.of(), NOW, List.of(), discrepancies);

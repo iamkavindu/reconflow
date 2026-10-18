@@ -20,8 +20,14 @@ class ReconciliationJpaEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "transaction_id", nullable = false)
+    @Column(name = "transaction_id")
     private UUID transactionId;
+
+    @Column(name = "business_reference", nullable = false, length = 100)
+    private String businessReference;
+
+    @Column(name = "provider_origin_id")
+    private UUID providerOriginId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -57,7 +63,9 @@ class ReconciliationJpaEntity {
             UUID providerTransactionId,
             Instant matchedAt,
             String ruleEvaluations,
-            String exceptionDecision) {
+            String exceptionDecision,
+            String businessReference,
+            UUID providerOriginId) {
         this.id = id;
         this.tenantId = tenantId;
         this.transactionId = transactionId;
@@ -68,6 +76,16 @@ class ReconciliationJpaEntity {
         this.matchedAt = matchedAt;
         this.ruleEvaluations = ruleEvaluations;
         this.exceptionDecision = exceptionDecision;
+        this.businessReference = businessReference;
+        this.providerOriginId = providerOriginId;
+    }
+
+    String businessReference() {
+        return businessReference;
+    }
+
+    UUID providerOriginId() {
+        return providerOriginId;
     }
 
     String exceptionDecision() {

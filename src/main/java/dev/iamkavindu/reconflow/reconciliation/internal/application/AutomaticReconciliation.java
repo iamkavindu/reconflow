@@ -1,6 +1,7 @@
 package dev.iamkavindu.reconflow.reconciliation.internal.application;
 
 import dev.iamkavindu.reconflow.provider.ProviderTransactionCandidates;
+import dev.iamkavindu.reconflow.provider.ProviderTransactionId;
 import dev.iamkavindu.reconflow.provider.ProviderTransactionView;
 import dev.iamkavindu.reconflow.reconciliation.Discrepancy;
 import dev.iamkavindu.reconflow.reconciliation.DiscrepancyType;
@@ -9,6 +10,7 @@ import dev.iamkavindu.reconflow.reconciliation.ReconciliationStatus;
 import dev.iamkavindu.reconflow.reconciliation.RuleEvaluation;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationMatched;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationReviewRequired;
+import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationUnmatched;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.DiscrepancyDetector;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.ExceptionDecision;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.MatchDecision;
@@ -64,11 +66,28 @@ class AutomaticReconciliation {
 
         for (var transaction : internal) {
             if (!reconciliations.existsByTenantIdAndTransactionId(tenantId, transaction.transactionId())) {
-                reconciliations.save(Reconciliation.pending(
-                        new ReconciliationId(UUID.randomUUID()),
-                        tenantId,
-                        transaction.transactionId(),
-                        policy.matchingWindowStartingAt(transaction.recordedAt())));
+                var providers = external.stream()
+                        .filter(candidate -> candidate.type().name().equals(transaction.type().name()))
+                        .toList();
+                Reconciliation providerOrigin = null;
+                if (!providers.isEmpty()) {
+                    providerOrigin = reconciliations.findByTenantIdAndProviderTransactionId(
+                                    tenantId, providers.getFirst().providerTransactionId()).stream()
+                            .filter(candidate -> candidate.transactionId() == null)
+                            .filter(candidate -> candidate.status() == ReconciliationStatus.PENDING)
+                            .filter(candidate -> !candidate.matchingWindow().isExpired(transaction.recordedAt()))
+                            .findFirst()
+                            .orElse(null);
+                }
+                var pending = providerOrigin == null
+                        ? Reconciliation.pending(
+                                new ReconciliationId(UUID.randomUUID()),
+                                tenantId,
+                                transaction.transactionId(),
+                                policy.matchingWindowStartingAt(transaction.recordedAt()),
+                                reference)
+                        : providerOrigin.attachTransaction(transaction.transactionId());
+                reconciliations.save(pending);
             }
         }
 
@@ -77,8 +96,7 @@ class AutomaticReconciliation {
             var reconciliation = reconciliations
                     .findByTenantIdAndTransactionId(tenantId, transaction.transactionId())
                     .orElseThrow();
-            if (reconciliation.status() != ReconciliationStatus.PENDING
-                    || reconciliation.matchingWindow().isExpired(now)) {
+            if (reconciliation.status() != ReconciliationStatus.PENDING) {
                 continue;
             }
 
@@ -86,7 +104,12 @@ class AutomaticReconciliation {
                     .filter(candidate ->
                             candidate.type().name().equals(transaction.type().name()))
                     .toList();
-            var candidates = sameType.isEmpty() ? external : sameType;
+            var candidates = (sameType.isEmpty() ? external : sameType).stream()
+                    .filter(candidate -> reconciliations.findByTenantIdAndProviderTransactionId(
+                                    tenantId, candidate.providerTransactionId()).stream()
+                            .allMatch(link -> link.reconciliationId().equals(reconciliation.reconciliationId())
+                                    || (link.status() == ReconciliationStatus.PENDING && link.transactionId() == null)))
+                    .toList();
             long internalCount = internal.stream()
                     .filter(candidate -> candidate.type() == transaction.type())
                     .count();
@@ -99,25 +122,52 @@ class AutomaticReconciliation {
                         "one internal and one provider candidate",
                         internalCount + " internal / " + candidates.size() + " provider candidates",
                         now);
-                requireReview(
-                        reconciliation, candidates, now, List.of(), List.of(discrepancy), correlationId, causationId);
+                Instant duplicateArrivedAt = internal.stream()
+                        .filter(candidate -> candidate.type() == transaction.type())
+                        .map(candidate -> candidate.recordedAt())
+                        .reduce(transaction.recordedAt(), (left, right) -> left.isAfter(right) ? left : right);
+                for (var candidate : candidates) {
+                    if (candidate.recordedAt().isAfter(duplicateArrivedAt)) {
+                        duplicateArrivedAt = candidate.recordedAt();
+                    }
+                }
+                if (!reconciliation.matchingWindow().isExpired(duplicateArrivedAt)) {
+                    requireReview(
+                            reconciliation, candidates, now, duplicateArrivedAt,
+                            List.of(), List.of(discrepancy), correlationId, causationId);
+                } else {
+                    expireMissing(reconciliation, now, correlationId, causationId);
+                }
                 continue;
             }
             if (candidates.isEmpty()) {
+                if (reconciliation.matchingWindow().isExpired(now)) {
+                    expireMissing(reconciliation, now, correlationId, causationId);
+                }
                 continue;
             }
 
             var providerTransaction = candidates.getFirst();
+            Instant arrivedAt = transaction.recordedAt().isAfter(providerTransaction.recordedAt())
+                    ? transaction.recordedAt()
+                    : providerTransaction.recordedAt();
+            if (reconciliation.matchingWindow().isExpired(arrivedAt)) {
+                if (reconciliation.matchingWindow().isExpired(now)) {
+                    expireMissing(reconciliation, now, correlationId, causationId);
+                }
+                continue;
+            }
             var evaluations =
                     evaluator.evaluate(transaction, providerTransaction, policy.maximumTransactionTimeDifference());
             var discrepancies = discrepancyDetector.detect(evaluations, transaction.type(), now);
             if (!discrepancies.isEmpty()) {
-                requireReview(reconciliation, candidates, now, evaluations, discrepancies, correlationId, causationId);
+                requireReview(
+                        reconciliation, candidates, now, arrivedAt, evaluations, discrepancies, correlationId, causationId);
                 continue;
             }
 
             var decision = new MatchDecision(tenantId, providerTransaction.providerTransactionId(), now, evaluations);
-            var matched = reconciliations.save(reconciliation.match(decision));
+            var matched = reconciliations.save(reconciliation.match(decision, arrivedAt));
             events.publishEvent(new ReconciliationMatched(
                     UUID.randomUUID(),
                     tenantId,
@@ -129,12 +179,49 @@ class AutomaticReconciliation {
                     correlationId,
                     causationId));
         }
+
+        for (var provider : external) {
+            var links = reconciliations.findByTenantIdAndProviderTransactionId(tenantId, provider.providerTransactionId());
+            if (links.isEmpty()) {
+                var pending = reconciliations.save(Reconciliation.pendingProvider(
+                        new ReconciliationId(UUID.randomUUID()),
+                        tenantId,
+                        provider.providerTransactionId(),
+                        policy.matchingWindowStartingAt(provider.recordedAt()),
+                        reference));
+                links = List.of(pending);
+            }
+            for (var pending : links) {
+                if (pending.status() != ReconciliationStatus.PENDING || pending.transactionId() != null) {
+                    continue;
+                }
+                if (pending.matchingWindow().isExpired(now)) {
+                    expireMissing(pending, now, correlationId, causationId);
+                } else if (internal.stream()
+                        .filter(transaction -> transaction.type().name().equals(provider.type().name()))
+                        .map(transaction -> reconciliations.findByTenantIdAndTransactionId(tenantId, transaction.transactionId()))
+                        .flatMap(java.util.Optional::stream)
+                        .anyMatch(existing -> existing.status() != ReconciliationStatus.PENDING)) {
+                    var discrepancy = new Discrepancy(
+                            UUID.randomUUID(),
+                            DiscrepancyType.DUPLICATE_TRANSACTION,
+                            "An additional provider record has an internal reference already accounted for",
+                            "one logical provider record",
+                            "additional provider record " + provider.providerTransactionReference(),
+                            now);
+                    requireReview(
+                            pending, List.of(provider), now, now,
+                            List.of(), List.of(discrepancy), correlationId, causationId);
+                }
+            }
+        }
     }
 
     private void requireReview(
             Reconciliation reconciliation,
             List<ProviderTransactionView> candidates,
             Instant now,
+            Instant arrivedAt,
             List<RuleEvaluation> evaluations,
             List<Discrepancy> discrepancies,
             UUID correlationId,
@@ -147,7 +234,7 @@ class AutomaticReconciliation {
                 now,
                 evaluations,
                 discrepancies);
-        var review = reconciliations.save(reconciliation.requireReview(decision));
+        var review = reconciliations.save(reconciliation.requireReview(decision, arrivedAt));
         events.publishEvent(new ReconciliationReviewRequired(
                 UUID.randomUUID(),
                 review.tenantId(),
@@ -156,5 +243,24 @@ class AutomaticReconciliation {
                 discrepancies,
                 correlationId,
                 causationId));
+    }
+
+    private void expireMissing(Reconciliation reconciliation, Instant now, UUID correlationId, UUID causationId) {
+        boolean missingProvider = reconciliation.transactionId() != null;
+        var discrepancy = new Discrepancy(
+                UUID.randomUUID(),
+                missingProvider ? DiscrepancyType.MISSING_PROVIDER_TRANSACTION : DiscrepancyType.MISSING_INTERNAL_TRANSACTION,
+                "No available counterpart arrived before the matching deadline",
+                "counterpart before " + reconciliation.matchingWindow().expiresAt(),
+                "no timely available counterpart",
+                now);
+        var providers = reconciliation.providerOriginId() == null
+                ? List.<ProviderTransactionId>of()
+                : List.of(reconciliation.providerOriginId());
+        var decision = new ExceptionDecision(reconciliation.tenantId(), providers, now, List.of(), List.of(discrepancy));
+        var unmatched = reconciliations.save(reconciliation.expire(decision));
+        events.publishEvent(new ReconciliationUnmatched(
+                UUID.randomUUID(), unmatched.tenantId(), unmatched.reconciliationId(), now,
+                decision.discrepancies(), correlationId, causationId));
     }
 }

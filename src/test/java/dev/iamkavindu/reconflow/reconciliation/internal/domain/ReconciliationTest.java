@@ -24,7 +24,8 @@ class ReconciliationTest {
                 new ReconciliationId(UUID.randomUUID()),
                 tenant,
                 new TransactionId(UUID.randomUUID()),
-                new MatchingWindow(start, start.plusSeconds(600)));
+                new MatchingWindow(start, start.plusSeconds(600)),
+                "ORD-1");
         var decision = decision(tenant, start.plusSeconds(10));
 
         var matched = pending.match(decision);
@@ -65,7 +66,7 @@ class ReconciliationTest {
         MatchingWindow window =
                 new MatchingWindow(Instant.parse("2026-10-10T09:25:00Z"), Instant.parse("2026-10-10T09:35:00Z"));
 
-        Reconciliation reconciliation = Reconciliation.pending(reconciliationId, tenantId, transactionId, window);
+        Reconciliation reconciliation = Reconciliation.pending(reconciliationId, tenantId, transactionId, window, "ORD-1");
 
         assertThat(reconciliation.reconciliationId()).isEqualTo(reconciliationId);
         assertThat(reconciliation.tenantId()).isEqualTo(tenantId);

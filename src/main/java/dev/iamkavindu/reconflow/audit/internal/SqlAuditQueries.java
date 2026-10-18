@@ -22,7 +22,8 @@ class SqlAuditQueries implements AuditQueries {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AuditEntry> forResource(TenantId tenantId, AuditResourceType type, UUID resourceId, long before, int limit) {
+    public List<AuditEntry> forResource(
+            TenantId tenantId, AuditResourceType type, UUID resourceId, long before, int limit) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(type);
         Objects.requireNonNull(resourceId);
@@ -41,9 +42,16 @@ class SqlAuditQueries implements AuditQueries {
                 .param("before", before)
                 .param("limit", limit)
                 .query((rs, row) -> new AuditEntry(
-                        rs.getLong("sequence"), rs.getObject("event_id", UUID.class), tenantId, type, resourceId,
-                        rs.getString("action"), rs.getString("actor"), rs.getTimestamp("occurred_at").toInstant(),
-                        rs.getTimestamp("recorded_at").toInstant(), rs.getObject("correlation_id", UUID.class),
+                        rs.getLong("sequence"),
+                        rs.getObject("event_id", UUID.class),
+                        tenantId,
+                        type,
+                        resourceId,
+                        rs.getString("action"),
+                        rs.getString("actor"),
+                        rs.getTimestamp("occurred_at").toInstant(),
+                        rs.getTimestamp("recorded_at").toInstant(),
+                        rs.getObject("correlation_id", UUID.class),
                         rs.getObject("causation_id", UUID.class)))
                 .list();
     }

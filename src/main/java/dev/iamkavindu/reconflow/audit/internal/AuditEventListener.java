@@ -30,61 +30,150 @@ class AuditEventListener {
 
     @ApplicationModuleListener
     void on(TransactionRecorded event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.TRANSACTION, event.transactionId().value(),
-                "TRANSACTION_RECORDED", event.recordedBy(), event.recordedAt(), event.correlationId(), null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.TRANSACTION,
+                event.transactionId().value(),
+                "TRANSACTION_RECORDED",
+                event.recordedBy(),
+                event.recordedAt(),
+                event.correlationId(),
+                null);
     }
 
     @ApplicationModuleListener
     void on(ProviderTransactionRecorded event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.PROVIDER_TRANSACTION, event.providerTransactionId().value(),
-                "PROVIDER_TRANSACTION_RECORDED", null, event.recordedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.PROVIDER_TRANSACTION,
+                event.providerTransactionId().value(),
+                "PROVIDER_TRANSACTION_RECORDED",
+                null,
+                event.recordedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 
     @ApplicationModuleListener
     void on(ReconciliationMatched event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.RECONCILIATION, event.reconciliationId().value(),
-                "RECONCILIATION_MATCHED", null, event.matchedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.RECONCILIATION,
+                event.reconciliationId().value(),
+                "RECONCILIATION_MATCHED",
+                null,
+                event.matchedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 
     @ApplicationModuleListener
     void on(ReconciliationReviewRequired event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.RECONCILIATION, event.reconciliationId().value(),
-                "RECONCILIATION_REVIEW_REQUIRED", null, event.decidedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.RECONCILIATION,
+                event.reconciliationId().value(),
+                "RECONCILIATION_REVIEW_REQUIRED",
+                null,
+                event.decidedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 
     @ApplicationModuleListener
     void on(ReconciliationUnmatched event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.RECONCILIATION, event.reconciliationId().value(),
-                "RECONCILIATION_UNMATCHED", null, event.decidedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.RECONCILIATION,
+                event.reconciliationId().value(),
+                "RECONCILIATION_UNMATCHED",
+                null,
+                event.decidedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 
     @ApplicationModuleListener
     void on(CaseOpened event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.CASE, event.caseId().value(),
-                "CASE_OPENED", null, event.openedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.CASE,
+                event.caseId().value(),
+                "CASE_OPENED",
+                null,
+                event.openedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 
     @ApplicationModuleListener
     void on(CaseReviewStarted event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.CASE, event.caseId().value(),
-                "CASE_REVIEW_STARTED", event.actor(), event.startedAt(), null, null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.CASE,
+                event.caseId().value(),
+                "CASE_REVIEW_STARTED",
+                event.actor(),
+                event.startedAt(),
+                null,
+                null);
     }
 
     @ApplicationModuleListener
     void on(CaseNoteAdded event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.CASE, event.caseId().value(),
-                "CASE_NOTE_ADDED", event.note().addedBy(), event.note().addedAt(), null, null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.CASE,
+                event.caseId().value(),
+                "CASE_NOTE_ADDED",
+                event.note().addedBy(),
+                event.note().addedAt(),
+                null,
+                null);
     }
 
     @ApplicationModuleListener
     void on(CaseResolved event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.CASE, event.caseId().value(),
-                "CASE_RESOLVED", event.resolution().resolvedBy(), event.resolution().resolvedAt(), null, null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.CASE,
+                event.caseId().value(),
+                "CASE_RESOLVED",
+                event.resolution().resolvedBy(),
+                event.resolution().resolvedAt(),
+                null,
+                null);
     }
 
-    private void append(UUID eventId, TenantId tenantId, AuditResourceType type, UUID resourceId,
-            String action, String actor, Instant occurredAt, UUID correlationId, UUID causationId) {
-        repository.append(eventId, tenantId.value(), type.name(), resourceId, action, actor,
-                occurredAt, Instant.now(clock), correlationId, causationId);
+    private void append(
+            UUID eventId,
+            TenantId tenantId,
+            AuditResourceType type,
+            UUID resourceId,
+            String action,
+            String actor,
+            Instant occurredAt,
+            UUID correlationId,
+            UUID causationId) {
+        repository.append(
+                eventId,
+                tenantId.value(),
+                type.name(),
+                resourceId,
+                action,
+                actor,
+                occurredAt,
+                Instant.now(clock),
+                correlationId,
+                causationId);
     }
 }

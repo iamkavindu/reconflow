@@ -23,7 +23,9 @@ class AuditController {
     }
 
     @GetMapping("/api/audit/{type}/{id}")
-    List<AuditEntry> history(@PathVariable AuditResourceType type, @PathVariable UUID id,
+    List<AuditEntry> history(
+            @PathVariable AuditResourceType type,
+            @PathVariable UUID id,
             @RequestParam(defaultValue = "9223372036854775807") long before,
             @RequestParam(defaultValue = "50") int limit) {
         return queries.forResource(currentActor.actor().tenantId(), type, id, before, limit);

@@ -67,7 +67,8 @@ class TransactionApplicationServiceTest {
         assertThat(recorded.status()).isEqualTo(TransactionStatus.RECORDED);
         assertThat(recorded.recordedAt()).isEqualTo(RECORDED_AT);
         assertThat(publishedEvents).singleElement().isInstanceOf(TransactionRecorded.class);
-        assertThat(((TransactionRecorded) publishedEvents.getFirst()).recordedBy()).isEqualTo("analyst");
+        assertThat(((TransactionRecorded) publishedEvents.getFirst()).recordedBy())
+                .isEqualTo("analyst");
     }
 
     @Test

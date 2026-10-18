@@ -16,8 +16,12 @@ public record TransactionRecorded(
         String recordedBy) {
 
     public TransactionRecorded(
-            UUID eventId, TenantId tenantId, TransactionId transactionId,
-            String businessReference, Instant recordedAt, UUID correlationId) {
+            UUID eventId,
+            TenantId tenantId,
+            TransactionId transactionId,
+            String businessReference,
+            Instant recordedAt,
+            UUID correlationId) {
         this(eventId, tenantId, transactionId, businessReference, recordedAt, correlationId, null);
     }
 

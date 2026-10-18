@@ -50,8 +50,7 @@ class TransactionRecordedListenerTest {
         }
 
         @Override
-        public Optional<Reconciliation> findByTenantIdAndTransactionId(
-                TenantId tenantId, TransactionId transactionId) {
+        public Optional<Reconciliation> findByTenantIdAndTransactionId(TenantId tenantId, TransactionId transactionId) {
             return reconciliations.stream()
                     .filter(reconciliation -> reconciliation.tenantId().equals(tenantId))
                     .filter(reconciliation -> reconciliation.transactionId().equals(transactionId))

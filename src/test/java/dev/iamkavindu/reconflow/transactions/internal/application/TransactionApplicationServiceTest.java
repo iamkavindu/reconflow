@@ -38,9 +38,8 @@ class TransactionApplicationServiceTest {
     private final InMemoryTransactionRepository repository = new InMemoryTransactionRepository();
     private final CurrentTenant currentTenant = () -> TENANT_ID;
     private final List<Object> publishedEvents = new ArrayList<>();
-    private final TransactionApplicationService service =
-            new TransactionApplicationService(
-                    currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
+    private final TransactionApplicationService service = new TransactionApplicationService(
+            currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC), publishedEvents::add);
 
     @Test
     void recordsTransactionUsingTrustedTenantAndApplicationControlledValues() {

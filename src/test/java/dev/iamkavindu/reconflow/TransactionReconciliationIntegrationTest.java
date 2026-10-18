@@ -49,7 +49,8 @@ class TransactionReconciliationIntegrationTest {
         assertThat(reconciliation.transactionId()).isEqualTo(transaction.transactionId());
         assertThat(reconciliation.status()).isEqualTo(ReconciliationStatus.PENDING);
         assertThat(reconciliation.startedAt()).isEqualTo(transaction.recordedAt());
-        assertThat(reconciliation.expiresAt()).isEqualTo(transaction.recordedAt().plus(Duration.ofMinutes(10)));
+        assertThat(reconciliation.expiresAt())
+                .isEqualTo(transaction.recordedAt().plus(Duration.ofMinutes(10)));
     }
 
     private ReconciliationView awaitReconciliation(TransactionView transaction) throws InterruptedException {

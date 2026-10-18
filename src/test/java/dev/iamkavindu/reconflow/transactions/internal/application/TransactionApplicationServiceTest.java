@@ -34,13 +34,17 @@ class TransactionApplicationServiceTest {
 
     private final InMemoryTransactionRepository repository = new InMemoryTransactionRepository();
     private final CurrentTenant currentTenant = () -> TENANT_ID;
-    private final TransactionApplicationService service = new TransactionApplicationService(
-            currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC));
+    private final TransactionApplicationService service =
+            new TransactionApplicationService(currentTenant, repository, Clock.fixed(RECORDED_AT, ZoneOffset.UTC));
 
     @Test
     void recordsTransactionUsingTrustedTenantAndApplicationControlledValues() {
         TransactionView recorded = service.recordTransaction(new RecordTransactionCommand(
-                "ORD-1001", TransactionType.PAYMENT, new BigDecimal("100.00"), Currency.getInstance("USD"), OCCURRED_AT));
+                "ORD-1001",
+                TransactionType.PAYMENT,
+                new BigDecimal("100.00"),
+                Currency.getInstance("USD"),
+                OCCURRED_AT));
 
         assertThat(recorded.transactionId()).isNotNull();
         assertThat(recorded.tenantId()).isEqualTo(TENANT_ID);
@@ -56,7 +60,11 @@ class TransactionApplicationServiceTest {
     @Test
     void retrievesTransactionOnlyWithinRequestedTenant() {
         TransactionView recorded = service.recordTransaction(new RecordTransactionCommand(
-                "ORD-1001", TransactionType.PAYMENT, new BigDecimal("100.00"), Currency.getInstance("USD"), OCCURRED_AT));
+                "ORD-1001",
+                TransactionType.PAYMENT,
+                new BigDecimal("100.00"),
+                Currency.getInstance("USD"),
+                OCCURRED_AT));
 
         assertThat(service.getTransaction(TENANT_ID, recorded.transactionId())).isEqualTo(recorded);
         assertThatThrownBy(() -> service.getTransaction(OTHER_TENANT_ID, recorded.transactionId()))
@@ -74,8 +82,7 @@ class TransactionApplicationServiceTest {
         }
 
         @Override
-        public Optional<Transaction> findByTenantIdAndTransactionId(
-                TenantId tenantId, TransactionId transactionId) {
+        public Optional<Transaction> findByTenantIdAndTransactionId(TenantId tenantId, TransactionId transactionId) {
             return Optional.ofNullable(transactions.get(transactionId))
                     .filter(transaction -> transaction.tenantId().equals(tenantId));
         }

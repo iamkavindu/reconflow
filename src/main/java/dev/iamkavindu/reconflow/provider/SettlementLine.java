@@ -25,6 +25,7 @@ public record SettlementLine(
     }
 
     private static boolean fitsStorage(BigDecimal value) {
-        return (long) value.precision() - value.scale() <= 15 && value.stripTrailingZeros().scale() <= 4;
+        return (long) value.precision() - value.scale() <= 15
+                && value.stripTrailingZeros().scale() <= 4;
     }
 }

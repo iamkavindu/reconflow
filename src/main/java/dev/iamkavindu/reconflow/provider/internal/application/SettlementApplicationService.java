@@ -131,7 +131,8 @@ class SettlementApplicationService implements SettlementCommands {
 
     private static BigDecimal money(BigDecimal value, int digits) {
         Objects.requireNonNull(value);
-        if ((long) value.precision() - value.scale() > 15 || value.stripTrailingZeros().scale() > digits) {
+        if ((long) value.precision() - value.scale() > 15
+                || value.stripTrailingZeros().scale() > digits) {
             throw new IllegalArgumentException("amount exceeds currency precision or settlement storage bounds");
         }
         return value.setScale(digits);

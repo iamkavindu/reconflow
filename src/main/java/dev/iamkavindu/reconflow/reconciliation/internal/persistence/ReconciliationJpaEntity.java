@@ -33,6 +33,15 @@ class ReconciliationJpaEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "provider_transaction_id")
+    private UUID providerTransactionId;
+
+    @Column(name = "matched_at")
+    private Instant matchedAt;
+
+    @Column(name = "rule_evaluations", columnDefinition = "text")
+    private String ruleEvaluations;
+
     protected ReconciliationJpaEntity() {}
 
     ReconciliationJpaEntity(
@@ -41,13 +50,31 @@ class ReconciliationJpaEntity {
             UUID transactionId,
             ReconciliationStatus status,
             Instant startedAt,
-            Instant expiresAt) {
+            Instant expiresAt,
+            UUID providerTransactionId,
+            Instant matchedAt,
+            String ruleEvaluations) {
         this.id = id;
         this.tenantId = tenantId;
         this.transactionId = transactionId;
         this.status = status;
         this.startedAt = startedAt;
         this.expiresAt = expiresAt;
+        this.providerTransactionId = providerTransactionId;
+        this.matchedAt = matchedAt;
+        this.ruleEvaluations = ruleEvaluations;
+    }
+
+    UUID providerTransactionId() {
+        return providerTransactionId;
+    }
+
+    Instant matchedAt() {
+        return matchedAt;
+    }
+
+    String ruleEvaluations() {
+        return ruleEvaluations;
     }
 
     UUID id() {

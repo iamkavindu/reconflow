@@ -70,17 +70,21 @@ class ReconciliationApplicationService implements ReconciliationQueries {
     public ReconciliationView getReconciliationById(TenantId tenantId, ReconciliationId reconciliationId) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(reconciliationId, "reconciliationId must not be null");
-        return reconciliationRepository.findByTenantIdAndId(tenantId, reconciliationId)
+        return reconciliationRepository
+                .findByTenantIdAndId(tenantId, reconciliationId)
                 .map(ReconciliationApplicationService::toView)
                 .orElseThrow(() -> new NoSuchElementException("Reconciliation not found"));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ReconciliationView getProviderReconciliation(TenantId tenantId, ProviderTransactionId providerTransactionId) {
+    public ReconciliationView getProviderReconciliation(
+            TenantId tenantId, ProviderTransactionId providerTransactionId) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(providerTransactionId, "providerTransactionId must not be null");
-        return reconciliationRepository.findByTenantIdAndProviderTransactionId(tenantId, providerTransactionId).stream()
+        return reconciliationRepository
+                .findByTenantIdAndProviderTransactionId(tenantId, providerTransactionId)
+                .stream()
                 .findFirst()
                 .map(ReconciliationApplicationService::toView)
                 .orElseThrow(() -> new NoSuchElementException("Reconciliation not found"));

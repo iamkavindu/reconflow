@@ -66,13 +66,18 @@ class MatchingWindowExpiryIntegrationTest {
     @Test
     void expiresMissingProviderExactlyAtDeadlineAndRepeatedScansPreserveDecision() throws Exception {
         var transaction = transactions.recordTransaction(new RecordTransactionCommand(
-                UUID.randomUUID().toString(), TransactionType.PAYMENT, new BigDecimal("100.00"),
-                Currency.getInstance("USD"), START));
-        var pending = await(() -> queries.getReconciliation(TENANT, transaction.transactionId()), ReconciliationStatus.PENDING);
+                UUID.randomUUID().toString(),
+                TransactionType.PAYMENT,
+                new BigDecimal("100.00"),
+                Currency.getInstance("USD"),
+                START));
+        var pending = await(
+                () -> queries.getReconciliation(TENANT, transaction.transactionId()), ReconciliationStatus.PENDING);
 
         clock.current.set(START.plusSeconds(599));
         maintenance.processExpiredMatchingWindows();
-        assertThat(queries.getReconciliation(TENANT, transaction.transactionId()).status())
+        assertThat(queries.getReconciliation(TENANT, transaction.transactionId())
+                        .status())
                 .isEqualTo(ReconciliationStatus.PENDING);
 
         clock.current.set(START.plusSeconds(600));
@@ -81,16 +86,20 @@ class MatchingWindowExpiryIntegrationTest {
 
         assertThat(unmatched.reconciliationId()).isEqualTo(pending.reconciliationId());
         assertThat(unmatched.status()).isEqualTo(ReconciliationStatus.UNMATCHED);
-        assertThat(unmatched.discrepancies()).extracting(discrepancy -> discrepancy.type())
+        assertThat(unmatched.discrepancies())
+                .extracting(discrepancy -> discrepancy.type())
                 .containsExactly(DiscrepancyType.MISSING_PROVIDER_TRANSACTION);
         maintenance.processExpiredMatchingWindows();
-        assertThat(queries.getReconciliation(TENANT, transaction.transactionId())).isEqualTo(unmatched);
+        assertThat(queries.getReconciliation(TENANT, transaction.transactionId()))
+                .isEqualTo(unmatched);
     }
 
     @Test
     void expiresOrphanProviderAndProtectsTenantScopedLookup() throws Exception {
         var payment = provider(UUID.randomUUID().toString());
-        await(() -> queries.getProviderReconciliation(TENANT, payment.providerTransactionId()), ReconciliationStatus.PENDING);
+        await(
+                () -> queries.getProviderReconciliation(TENANT, payment.providerTransactionId()),
+                ReconciliationStatus.PENDING);
 
         clock.current.set(START.plusSeconds(600));
         maintenance.processExpiredMatchingWindows();
@@ -99,7 +108,8 @@ class MatchingWindowExpiryIntegrationTest {
         assertThat(unmatched.status()).isEqualTo(ReconciliationStatus.UNMATCHED);
         assertThat(unmatched.transactionId()).isNull();
         assertThat(unmatched.providerOriginId()).isEqualTo(payment.providerTransactionId());
-        assertThat(unmatched.discrepancies()).extracting(discrepancy -> discrepancy.type())
+        assertThat(unmatched.discrepancies())
+                .extracting(discrepancy -> discrepancy.type())
                 .containsExactly(DiscrepancyType.MISSING_INTERNAL_TRANSACTION);
         assertThatThrownBy(() -> queries.getProviderReconciliation(
                         new TenantId(UUID.randomUUID()), payment.providerTransactionId()))
@@ -123,7 +133,8 @@ class MatchingWindowExpiryIntegrationTest {
         assertThat(matched.reconciliationId()).isEqualTo(pending.reconciliationId());
         clock.current.set(START.plusSeconds(601));
         maintenance.processExpiredMatchingWindows();
-        assertThat(queries.getProviderReconciliation(TENANT, payment.providerTransactionId())).isEqualTo(matched);
+        assertThat(queries.getProviderReconciliation(TENANT, payment.providerTransactionId()))
+                .isEqualTo(matched);
     }
 
     private ProviderTransactionView provider(String reference) {

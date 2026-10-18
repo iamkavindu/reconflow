@@ -8,7 +8,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
-@ConditionalOnProperty(prefix = "reconflow.reconciliation", name = "scheduling-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+        prefix = "reconflow.reconciliation",
+        name = "scheduling-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 class MatchingWindowScheduler {
 
     private final ReconciliationMaintenance maintenance;

@@ -40,22 +40,22 @@ class JpaReconciliationRepository implements ReconciliationRepository {
 
     @Override
     public Optional<Reconciliation> findByTenantIdAndId(TenantId tenantId, ReconciliationId reconciliationId) {
-        return repository.findByTenantIdAndId(tenantId.value(), reconciliationId.value())
+        return repository
+                .findByTenantIdAndId(tenantId.value(), reconciliationId.value())
                 .map(ReconciliationPersistenceMapper::toDomain);
     }
 
     @Override
-    public List<Reconciliation> findByTenantIdAndProviderTransactionId(TenantId tenantId, ProviderTransactionId providerId) {
+    public List<Reconciliation> findByTenantIdAndProviderTransactionId(
+            TenantId tenantId, ProviderTransactionId providerId) {
         String providerLink = "[{\"value\":\"" + providerId.value() + "\"}]";
-        return repository.findProviderLinks(tenantId.value(), providerId.value(), providerLink).stream()
-                .map(ReconciliationPersistenceMapper::toDomain)
-                .toList();
+        var entities = repository.findProviderLinks(tenantId.value(), providerId.value(), providerLink);
+        return entities.stream().map(ReconciliationPersistenceMapper::toDomain).toList();
     }
 
     @Override
     public List<Reconciliation> findPendingExpiredBefore(Instant now, int limit) {
-        return repository.findExpired(now, limit).stream()
-                .map(ReconciliationPersistenceMapper::toDomain)
-                .toList();
+        var entities = repository.findExpired(now, limit);
+        return entities.stream().map(ReconciliationPersistenceMapper::toDomain).toList();
     }
 }

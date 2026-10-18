@@ -66,7 +66,8 @@ class ReconciliationTest {
         MatchingWindow window =
                 new MatchingWindow(Instant.parse("2026-10-10T09:25:00Z"), Instant.parse("2026-10-10T09:35:00Z"));
 
-        Reconciliation reconciliation = Reconciliation.pending(reconciliationId, tenantId, transactionId, window, "ORD-1");
+        Reconciliation reconciliation =
+                Reconciliation.pending(reconciliationId, tenantId, transactionId, window, "ORD-1");
 
         assertThat(reconciliation.reconciliationId()).isEqualTo(reconciliationId);
         assertThat(reconciliation.tenantId()).isEqualTo(tenantId);

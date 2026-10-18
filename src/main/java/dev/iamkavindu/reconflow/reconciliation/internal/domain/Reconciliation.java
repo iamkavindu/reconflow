@@ -87,7 +87,13 @@ public class Reconciliation {
             throw new IllegalArgumentException("match must occur within the matching window");
         }
         return new Reconciliation(
-                reconciliationId, tenantId, transactionId, ReconciliationStatus.MATCHED, matchingWindow, decision, null);
+                reconciliationId,
+                tenantId,
+                transactionId,
+                ReconciliationStatus.MATCHED,
+                matchingWindow,
+                decision,
+                null);
     }
 
     public Reconciliation requireReview(ExceptionDecision decision) {

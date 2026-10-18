@@ -14,7 +14,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 final class ReconciliationPersistenceMapper {
 
-    private static final JsonMapper JSON = JsonMapper.builder().findAndAddModules().build();
+    private static final JsonMapper JSON =
+            JsonMapper.builder().findAndAddModules().build();
 
     private ReconciliationPersistenceMapper() {}
 

@@ -83,7 +83,8 @@ class AutomaticReconciliation {
             }
 
             var sameType = external.stream()
-                    .filter(candidate -> candidate.type().name().equals(transaction.type().name()))
+                    .filter(candidate ->
+                            candidate.type().name().equals(transaction.type().name()))
                     .toList();
             var candidates = sameType.isEmpty() ? external : sameType;
             long internalCount = internal.stream()
@@ -140,7 +141,9 @@ class AutomaticReconciliation {
             UUID causationId) {
         var decision = new ExceptionDecision(
                 reconciliation.tenantId(),
-                candidates.stream().map(ProviderTransactionView::providerTransactionId).toList(),
+                candidates.stream()
+                        .map(ProviderTransactionView::providerTransactionId)
+                        .toList(),
                 now,
                 evaluations,
                 discrepancies);

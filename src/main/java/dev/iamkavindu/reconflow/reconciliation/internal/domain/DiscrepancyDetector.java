@@ -25,9 +25,8 @@ public final class DiscrepancyDetector {
 
     private static DiscrepancyType classify(String rule, TransactionType type) {
         return switch (rule) {
-            case "AMOUNT" -> type == TransactionType.REFUND
-                    ? DiscrepancyType.REFUND_MISMATCH
-                    : DiscrepancyType.AMOUNT_MISMATCH;
+            case "AMOUNT" ->
+                type == TransactionType.REFUND ? DiscrepancyType.REFUND_MISMATCH : DiscrepancyType.AMOUNT_MISMATCH;
             case "CURRENCY" -> DiscrepancyType.CURRENCY_MISMATCH;
             case "TYPE" -> DiscrepancyType.REFUND_MISMATCH;
             case "STATUS" -> DiscrepancyType.STATUS_MISMATCH;

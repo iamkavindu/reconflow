@@ -9,6 +9,11 @@ import org.springframework.stereotype.Component;
 class ReconciliationPolicy {
 
     private static final Duration MATCHING_WINDOW = Duration.ofMinutes(10);
+    private static final Duration MAXIMUM_TRANSACTION_TIME_DIFFERENCE = Duration.ofMinutes(10);
+
+    Duration maximumTransactionTimeDifference() {
+        return MAXIMUM_TRANSACTION_TIME_DIFFERENCE;
+    }
 
     MatchingWindow matchingWindowStartingAt(Instant startedAt) {
         return new MatchingWindow(startedAt, startedAt.plus(MATCHING_WINDOW));

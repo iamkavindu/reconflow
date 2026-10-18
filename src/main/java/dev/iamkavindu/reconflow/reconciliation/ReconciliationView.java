@@ -1,8 +1,10 @@
 package dev.iamkavindu.reconflow.reconciliation;
 
+import dev.iamkavindu.reconflow.provider.ProviderTransactionId;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import dev.iamkavindu.reconflow.transactions.TransactionId;
 import java.time.Instant;
+import java.util.List;
 
 public record ReconciliationView(
         ReconciliationId reconciliationId,
@@ -10,4 +12,12 @@ public record ReconciliationView(
         TransactionId transactionId,
         ReconciliationStatus status,
         Instant startedAt,
-        Instant expiresAt) {}
+        Instant expiresAt,
+        ProviderTransactionId providerTransactionId,
+        Instant matchedAt,
+        List<RuleEvaluation> ruleEvaluations) {
+
+    public ReconciliationView {
+        ruleEvaluations = List.copyOf(ruleEvaluations);
+    }
+}

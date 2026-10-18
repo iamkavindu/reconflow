@@ -13,6 +13,7 @@ public class Reconciliation {
     private final TransactionId transactionId;
     private final ReconciliationStatus status;
     private final MatchingWindow matchingWindow;
+    private final MatchDecision matchDecision;
 
     private Reconciliation(
             ReconciliationId reconciliationId,
@@ -20,11 +21,28 @@ public class Reconciliation {
             TransactionId transactionId,
             ReconciliationStatus status,
             MatchingWindow matchingWindow) {
+        this(reconciliationId, tenantId, transactionId, status, matchingWindow, null);
+    }
+
+    private Reconciliation(
+            ReconciliationId reconciliationId,
+            TenantId tenantId,
+            TransactionId transactionId,
+            ReconciliationStatus status,
+            MatchingWindow matchingWindow,
+            MatchDecision matchDecision) {
         this.reconciliationId = Objects.requireNonNull(reconciliationId, "reconciliationId must not be null");
         this.tenantId = Objects.requireNonNull(tenantId, "tenantId must not be null");
         this.transactionId = Objects.requireNonNull(transactionId, "transactionId must not be null");
         this.status = Objects.requireNonNull(status, "status must not be null");
         this.matchingWindow = Objects.requireNonNull(matchingWindow, "matchingWindow must not be null");
+        this.matchDecision = matchDecision;
+        if ((status == ReconciliationStatus.MATCHED) != (matchDecision != null)) {
+            throw new IllegalArgumentException("only a matched reconciliation must have a match decision");
+        }
+        if (matchDecision != null && !tenantId.equals(matchDecision.tenantId())) {
+            throw new IllegalArgumentException("match decision must belong to the same tenant");
+        }
     }
 
     public static Reconciliation pending(
@@ -41,8 +59,26 @@ public class Reconciliation {
             TenantId tenantId,
             TransactionId transactionId,
             ReconciliationStatus status,
-            MatchingWindow matchingWindow) {
-        return new Reconciliation(reconciliationId, tenantId, transactionId, status, matchingWindow);
+            MatchingWindow matchingWindow,
+            MatchDecision matchDecision) {
+        return new Reconciliation(reconciliationId, tenantId, transactionId, status, matchingWindow, matchDecision);
+    }
+
+    public Reconciliation match(MatchDecision decision) {
+        Objects.requireNonNull(decision, "decision must not be null");
+        if (status != ReconciliationStatus.PENDING) {
+            throw new IllegalStateException("only a pending reconciliation can be matched");
+        }
+        if (decision.matchedAt().isBefore(matchingWindow.startedAt())
+                || matchingWindow.isExpired(decision.matchedAt())) {
+            throw new IllegalArgumentException("match must occur within the matching window");
+        }
+        return new Reconciliation(
+                reconciliationId, tenantId, transactionId, ReconciliationStatus.MATCHED, matchingWindow, decision);
+    }
+
+    public MatchDecision matchDecision() {
+        return matchDecision;
     }
 
     public ReconciliationId reconciliationId() {

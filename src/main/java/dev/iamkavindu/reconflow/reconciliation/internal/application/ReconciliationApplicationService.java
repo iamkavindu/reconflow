@@ -6,6 +6,7 @@ import dev.iamkavindu.reconflow.reconciliation.internal.domain.Reconciliation;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.ReconciliationRepository;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import dev.iamkavindu.reconflow.transactions.TransactionId;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -33,12 +34,16 @@ class ReconciliationApplicationService implements ReconciliationQueries {
     }
 
     private static ReconciliationView toView(Reconciliation reconciliation) {
+        var decision = reconciliation.matchDecision();
         return new ReconciliationView(
                 reconciliation.reconciliationId(),
                 reconciliation.tenantId(),
                 reconciliation.transactionId(),
                 reconciliation.status(),
                 reconciliation.matchingWindow().startedAt(),
-                reconciliation.matchingWindow().expiresAt());
+                reconciliation.matchingWindow().expiresAt(),
+                decision == null ? null : decision.providerTransactionId(),
+                decision == null ? null : decision.matchedAt(),
+                decision == null ? List.of() : decision.evaluations());
     }
 }

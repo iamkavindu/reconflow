@@ -5,6 +5,8 @@ import dev.iamkavindu.reconflow.cases.events.CaseNoteAdded;
 import dev.iamkavindu.reconflow.cases.events.CaseOpened;
 import dev.iamkavindu.reconflow.cases.events.CaseResolved;
 import dev.iamkavindu.reconflow.cases.events.CaseReviewStarted;
+import dev.iamkavindu.reconflow.cases.events.InvestigationRequested;
+import dev.iamkavindu.reconflow.cases.events.InvestigationStateChanged;
 import dev.iamkavindu.reconflow.provider.events.ProviderTransactionRecorded;
 import dev.iamkavindu.reconflow.provider.events.SettlementImported;
 import dev.iamkavindu.reconflow.reconciliation.events.ReconciliationMatched;
@@ -190,5 +192,17 @@ class AuditEventListener {
                 Instant.now(clock),
                 correlationId,
                 causationId);
+    }
+
+    @ApplicationModuleListener
+    void on(InvestigationRequested event) {
+        append(event.eventId(), event.tenantId(), AuditResourceType.INVESTIGATION, event.investigationId().value(),
+                "INVESTIGATION_REQUESTED", event.requestedBy(), event.requestedAt(), event.correlationId(), null);
+    }
+
+    @ApplicationModuleListener
+    void on(InvestigationStateChanged event) {
+        append(event.eventId(), event.tenantId(), AuditResourceType.INVESTIGATION, event.investigationId().value(),
+                "INVESTIGATION_" + event.status().name(), null, event.changedAt(), event.correlationId(), event.causationId());
     }
 }

@@ -5,5 +5,6 @@ public enum AuditResourceType {
     PROVIDER_TRANSACTION,
     SETTLEMENT,
     RECONCILIATION,
-    CASE
+    CASE,
+    INVESTIGATION
 }

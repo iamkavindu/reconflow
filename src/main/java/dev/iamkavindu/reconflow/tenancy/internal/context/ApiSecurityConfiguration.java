@@ -64,7 +64,8 @@ class ApiSecurityConfiguration {
         } catch (IllegalArgumentException | NullPointerException error) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_token"));
         }
-        var actor = memberships.findEnabled(tenantId, jwt.getSubject())
+        var actor = memberships
+                .findEnabled(tenantId, jwt.getSubject())
                 .orElseThrow(() -> new OAuth2AuthenticationException(new OAuth2Error("invalid_token")));
         return new TenantAuthentication(actor);
     }

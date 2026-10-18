@@ -18,7 +18,8 @@ class AuthenticatedCurrentActor implements CurrentActor, CurrentTenant {
     @Override
     public Actor actor() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
+        if (authentication == null
+                || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof Actor actor)) {
             throw new OperationNotAuthorizedException("an active tenant membership is required");
         }

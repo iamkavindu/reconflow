@@ -13,7 +13,10 @@ class OpenApiConfiguration {
 
     @Bean
     OpenAPI reconflowApi() {
-        var bearer = new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT");
+        var bearer = new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT");
         return new OpenAPI()
                 .info(new Info().title("ReconFlow API").version("v1"))
                 .components(new Components().addSecuritySchemes("bearer", bearer))

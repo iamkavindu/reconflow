@@ -43,8 +43,11 @@ class TransactionController {
     ResponseEntity<TransactionView> record(@Valid @RequestBody RecordRequest request) {
         currentActor.actor().requireAnalyst();
         var command = new RecordTransactionCommand(
-                request.businessReference(), request.type(), request.amount(),
-                Currency.getInstance(request.currency()), request.occurredAt());
+                request.businessReference(),
+                request.type(),
+                request.amount(),
+                Currency.getInstance(request.currency()),
+                request.occurredAt());
         var result = commands.recordTransaction(command);
         return ResponseEntity.created(URI.create("/api/transactions/" + result.transactionId().value())).body(result);
     }

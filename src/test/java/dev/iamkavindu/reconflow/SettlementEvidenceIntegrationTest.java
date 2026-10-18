@@ -159,6 +159,9 @@ class SettlementEvidenceIntegrationTest {
     void rejectsUnbalancedDuplicateAndOverprecisionLines() {
         String reference = UUID.randomUUID().toString();
         assertThatThrownBy(() -> new SettlementLine(
+                        reference, new BigDecimal("1E+1000000"), BigDecimal.ZERO, new BigDecimal("1E+1000000")))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SettlementLine(
                         reference, new BigDecimal("100.00"), new BigDecimal("3.20"), new BigDecimal("97.00")))
                 .isInstanceOf(IllegalArgumentException.class);
         var source = command(TENANT, reference, reference, "100.00", "3.20", "96.80");

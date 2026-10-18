@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "reconflow.kafka.enabled=true")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=true", "reconflow.security.enabled=false"})
 @Testcontainers
 class ProviderEventKafkaIntegrationTest {
 

@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "reconflow.kafka.enabled=false")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=false", "reconflow.security.enabled=false"})
 @Transactional
 class TransactionRecordingIntegrationTest {
 

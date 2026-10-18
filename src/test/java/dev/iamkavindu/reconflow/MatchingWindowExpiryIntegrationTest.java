@@ -40,7 +40,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
 @Import({TestcontainersConfiguration.class, MatchingWindowExpiryIntegrationTest.ClockConfiguration.class})
-@SpringBootTest(properties = {"reconflow.kafka.enabled=false", "reconflow.reconciliation.scheduling-enabled=false"})
+@SpringBootTest(properties = {"reconflow.security.enabled=false", "reconflow.kafka.enabled=false", "reconflow.reconciliation.scheduling-enabled=false"})
 class MatchingWindowExpiryIntegrationTest {
 
     private static final Instant START = Instant.parse("2026-10-10T10:00:00Z");

@@ -17,6 +17,11 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 reconflow:
+  security:
+    enabled: true
+    issuer: ${OIDC_ISSUER:http://localhost:8180/realms/reconflow}
+    jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8180/realms/reconflow/protocol/openid-connect/certs}
+    audience: reconflow
   kafka:
     enabled: true
     provider-events-group: reconflow-provider-events-v1

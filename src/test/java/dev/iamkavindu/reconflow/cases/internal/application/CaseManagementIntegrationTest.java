@@ -45,7 +45,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Import({TestcontainersConfiguration.class, CaseManagementIntegrationTest.ActorConfiguration.class})
-@SpringBootTest(properties = "reconflow.kafka.enabled=false")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=false", "reconflow.security.enabled=false"})
 class CaseManagementIntegrationTest {
 
     private static final TenantId TENANT = new TenantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));

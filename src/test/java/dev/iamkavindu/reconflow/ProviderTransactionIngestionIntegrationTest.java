@@ -22,7 +22,7 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "reconflow.kafka.enabled=false")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=false", "reconflow.security.enabled=false"})
 @RecordApplicationEvents
 class ProviderTransactionIngestionIntegrationTest {
 

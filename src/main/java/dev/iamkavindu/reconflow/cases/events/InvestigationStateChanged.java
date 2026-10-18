@@ -7,5 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record InvestigationStateChanged(
-        UUID eventId, TenantId tenantId, InvestigationId investigationId, InvestigationStatus status,
-        Instant changedAt, UUID correlationId, UUID causationId) {}
+        UUID eventId,
+        TenantId tenantId,
+        InvestigationId investigationId,
+        InvestigationStatus status,
+        Instant changedAt,
+        UUID correlationId,
+        UUID causationId) {}

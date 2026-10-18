@@ -7,5 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record InvestigationRequested(
-        UUID eventId, TenantId tenantId, CaseId caseId, InvestigationId investigationId,
-        String requestedBy, Instant requestedAt, UUID correlationId) {}
+        UUID eventId,
+        TenantId tenantId,
+        CaseId caseId,
+        InvestigationId investigationId,
+        String requestedBy,
+        Instant requestedAt,
+        UUID correlationId) {}

@@ -27,6 +27,10 @@ public interface InvestigationJpaRepository extends JpaRepository<InvestigationJ
                     VALUES (:id, :tenant, :caseId, 'REQUESTED', :actor, :requested, 0)
                     ON CONFLICT DO NOTHING
                     """, nativeQuery = true)
-    int requestIfAbsent(@Param("id") UUID id, @Param("tenant") UUID tenant,
-            @Param("caseId") UUID caseId, @Param("actor") String actor, @Param("requested") Instant requestedAt);
+    int requestIfAbsent(
+            @Param("id") UUID id,
+            @Param("tenant") UUID tenant,
+            @Param("caseId") UUID caseId,
+            @Param("actor") String actor,
+            @Param("requested") Instant requestedAt);
 }

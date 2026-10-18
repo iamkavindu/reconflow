@@ -28,19 +28,28 @@ public class InvestigationStore {
     }
 
     public Investigation get(TenantId tenant, InvestigationId id) {
-        return repository.findByTenantIdAndId(tenant.value(), id.value()).map(this::map)
+        return repository
+                .findByTenantIdAndId(tenant.value(), id.value())
+                .map(this::map)
                 .orElseThrow(() -> new NoSuchElementException("Investigation not found"));
     }
 
     public Investigation activeOrLatest(TenantId tenant, CaseId caseId) {
-        return repository.findFirstByTenantIdAndCaseIdAndStatusIn(tenant.value(), caseId.value(),
-                List.of(InvestigationStatus.REQUESTED, InvestigationStatus.RUNNING)).map(this::map)
+        return repository
+                .findFirstByTenantIdAndCaseIdAndStatusIn(
+                        tenant.value(),
+                        caseId.value(),
+                        List.of(InvestigationStatus.REQUESTED, InvestigationStatus.RUNNING))
+                .map(this::map)
                 .orElseGet(() -> history(tenant, caseId).getFirst());
     }
 
     public List<Investigation> history(TenantId tenant, CaseId caseId) {
-        return repository.findTop100ByTenantIdAndCaseIdOrderByRequestedAtDescIdDesc(tenant.value(), caseId.value())
-                .stream().map(this::map).toList();
+        return repository
+                .findTop100ByTenantIdAndCaseIdOrderByRequestedAtDescIdDesc(tenant.value(), caseId.value())
+                .stream()
+                .map(this::map)
+                .toList();
     }
 
     public Investigation save(Investigation value) {
@@ -62,9 +71,19 @@ public class InvestigationStore {
     }
 
     private Investigation map(InvestigationJpaEntity entity) {
-        return new Investigation(new InvestigationId(entity.id), new TenantId(entity.tenantId), new CaseId(entity.caseId),
-                entity.status, entity.requestedBy, entity.requestedAt, entity.startedAt, entity.completedAt,
+        return new Investigation(
+                new InvestigationId(entity.id),
+                new TenantId(entity.tenantId),
+                new CaseId(entity.caseId),
+                entity.status,
+                entity.requestedBy,
+                entity.requestedAt,
+                entity.startedAt,
+                entity.completedAt,
                 entity.result == null ? null : json.readValue(entity.result, InvestigationResult.class),
-                entity.failureReason, entity.model, entity.promptVersion, entity.version);
+                entity.failureReason,
+                entity.model,
+                entity.promptVersion,
+                entity.version);
     }
 }

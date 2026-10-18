@@ -20,14 +20,22 @@ class InvestigationTest {
 
     @Test
     void requiresRunningStateAndAnAcceptedJudgmentBeforeCompletion() {
-        var requested = Investigation.request(new InvestigationId(UUID.randomUUID()), new TenantId(UUID.randomUUID()),
-                new CaseId(UUID.randomUUID()), "analyst", Instant.EPOCH);
+        var requested = Investigation.request(
+                new InvestigationId(UUID.randomUUID()),
+                new TenantId(UUID.randomUUID()),
+                new CaseId(UUID.randomUUID()),
+                "analyst",
+                Instant.EPOCH);
         var result = result(new InvestigationJudgment(true, 0.9, 0.9, 0));
         assertThatThrownBy(() -> requested.complete(result, "model", "v1", Instant.EPOCH.plusSeconds(1)))
                 .isInstanceOf(IllegalStateException.class);
         var running = requested.start(Instant.EPOCH.plusSeconds(1));
-        assertThatThrownBy(() -> running.complete(result(new InvestigationJudgment(false, 0.2, 0.3, 1)),
-                "model", "v1", Instant.EPOCH.plusSeconds(2))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> running.complete(
+                        result(new InvestigationJudgment(false, 0.2, 0.3, 1)),
+                        "model",
+                        "v1",
+                        Instant.EPOCH.plusSeconds(2)))
+                .isInstanceOf(IllegalStateException.class);
         var completed = running.complete(result, "model", "v1", Instant.EPOCH.plusSeconds(2));
         assertThat(completed.fail("late failure", Instant.EPOCH.plusSeconds(3))).isSameAs(completed);
     }
@@ -39,7 +47,13 @@ class InvestigationTest {
         assertThatThrownBy(() -> new InvestigationJudgment(true, 0.9, 0.9, 2))
                 .isInstanceOf(IllegalArgumentException.class);
         var evidence = new ArrayList<>(List.of(new InvestigationEvidence("transaction:demo", "Recorded source")));
-        var result = new InvestigationResult("Summary", "Cause", evidence, null, 0.5, List.of("Incomplete policy"),
+        var result = new InvestigationResult(
+                "Summary",
+                "Cause",
+                evidence,
+                null,
+                0.5,
+                List.of("Incomplete policy"),
                 new InvestigationJudgment(true, 0.9, 0.9, 0));
         evidence.clear();
         assertThat(result.evidence()).hasSize(1);
@@ -47,7 +61,13 @@ class InvestigationTest {
     }
 
     private InvestigationResult result(InvestigationJudgment judgment) {
-        return new InvestigationResult("Summary", "Cause", List.of(new InvestigationEvidence("case:demo", "Case source")),
-                ResolutionType.MANUAL_REVIEW_COMPLETED, 0.5, List.of("Policy needs human confirmation"), judgment);
+        return new InvestigationResult(
+                "Summary",
+                "Cause",
+                List.of(new InvestigationEvidence("case:demo", "Case source")),
+                ResolutionType.MANUAL_REVIEW_COMPLETED,
+                0.5,
+                List.of("Policy needs human confirmation"),
+                judgment);
     }
 }

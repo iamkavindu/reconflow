@@ -18,9 +18,16 @@ public record InvestigationResult(
         Objects.requireNonNull(judgment);
         evidence = List.copyOf(evidence);
         limitations = List.copyOf(limitations);
-        if (summary.isBlank() || summary.length() > 4000 || likelyCause.isBlank() || likelyCause.length() > 1000
-                || evidence.isEmpty() || evidence.size() > 30 || limitations.size() > 20
-                || !Double.isFinite(confidence) || confidence < 0 || confidence > 1
+        if (summary.isBlank()
+                || summary.length() > 4000
+                || likelyCause.isBlank()
+                || likelyCause.length() > 1000
+                || evidence.isEmpty()
+                || evidence.size() > 30
+                || limitations.size() > 20
+                || !Double.isFinite(confidence)
+                || confidence < 0
+                || confidence > 1
                 || limitations.stream().anyMatch(value -> value.isBlank() || value.length() > 1000)) {
             throw new IllegalArgumentException("investigation recommendations must be bounded and cite evidence");
         }

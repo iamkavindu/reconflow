@@ -7,8 +7,12 @@ public interface InvestigationProcessing {
 
     InvestigationView start(TenantId tenantId, InvestigationId investigationId);
 
-    InvestigationView complete(TenantId tenantId, InvestigationId investigationId,
-            InvestigationResult result, String model, String promptVersion);
+    InvestigationView complete(
+            TenantId tenantId,
+            InvestigationId investigationId,
+            InvestigationResult result,
+            String model,
+            String promptVersion);
 
     InvestigationView fail(TenantId tenantId, InvestigationId investigationId, String safeReason);
 }

@@ -33,8 +33,12 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
     private final Clock clock;
     private final ApplicationEventPublisher events;
 
-    InvestigationApplicationService(InvestigationStore store, CaseQueries cases, CurrentActor currentActor,
-            Clock clock, ApplicationEventPublisher events) {
+    InvestigationApplicationService(
+            InvestigationStore store,
+            CaseQueries cases,
+            CurrentActor currentActor,
+            Clock clock,
+            ApplicationEventPublisher events) {
         this.store = store;
         this.cases = cases;
         this.currentActor = currentActor;
@@ -57,8 +61,8 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
             return view(store.activeOrLatest(actor.tenantId(), caseId));
         }
         // The request event identity is deterministic for this investigation.
-        events.publishEvent(new InvestigationRequested(id.value(), actor.tenantId(), caseId, id,
-                actor.subject(), now, id.value()));
+        events.publishEvent(
+                new InvestigationRequested(id.value(), actor.tenantId(), caseId, id, actor.subject(), now, id.value()));
         return view(store.get(actor.tenantId(), id));
     }
 
@@ -72,7 +76,9 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
     @Transactional(readOnly = true)
     public List<InvestigationView> forCase(TenantId tenantId, CaseId caseId) {
         cases.getCase(tenantId, caseId);
-        return store.history(tenantId, caseId).stream().map(InvestigationApplicationService::view).toList();
+        return store.history(tenantId, caseId).stream()
+                .map(InvestigationApplicationService::view)
+                .toList();
     }
 
     @Override
@@ -85,8 +91,12 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
 
     @Override
     @Transactional
-    public InvestigationView complete(TenantId tenantId, InvestigationId investigationId,
-            InvestigationResult result, String model, String promptVersion) {
+    public InvestigationView complete(
+            TenantId tenantId,
+            InvestigationId investigationId,
+            InvestigationResult result,
+            String model,
+            String promptVersion) {
         var existing = store.get(tenantId, investigationId);
         return changed(existing, existing.complete(result, model, promptVersion, now()));
     }
@@ -104,8 +114,14 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
         }
         var saved = store.save(next);
         Instant occurredAt = saved.completedAt() == null ? saved.startedAt() : saved.completedAt();
-        events.publishEvent(new InvestigationStateChanged(UUID.randomUUID(), saved.tenantId(), saved.id(),
-                saved.status(), occurredAt, saved.id().value(), saved.id().value()));
+        events.publishEvent(new InvestigationStateChanged(
+                UUID.randomUUID(),
+                saved.tenantId(),
+                saved.id(),
+                saved.status(),
+                occurredAt,
+                saved.id().value(),
+                saved.id().value()));
         return view(saved);
     }
 
@@ -114,8 +130,19 @@ class InvestigationApplicationService implements InvestigationCommands, Investig
     }
 
     private static InvestigationView view(Investigation value) {
-        return new InvestigationView(value.id(), value.tenantId(), value.caseId(), "AI_ASSISTED", value.status(), value.requestedBy(),
-                value.requestedAt(), value.startedAt(), value.completedAt(), value.result(), value.failureReason(),
-                value.model(), value.promptVersion());
+        return new InvestigationView(
+                value.id(),
+                value.tenantId(),
+                value.caseId(),
+                "AI_ASSISTED",
+                value.status(),
+                value.requestedBy(),
+                value.requestedAt(),
+                value.startedAt(),
+                value.completedAt(),
+                value.result(),
+                value.failureReason(),
+                value.model(),
+                value.promptVersion());
     }
 }

@@ -196,13 +196,29 @@ class AuditEventListener {
 
     @ApplicationModuleListener
     void on(InvestigationRequested event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.INVESTIGATION, event.investigationId().value(),
-                "INVESTIGATION_REQUESTED", event.requestedBy(), event.requestedAt(), event.correlationId(), null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.INVESTIGATION,
+                event.investigationId().value(),
+                "INVESTIGATION_REQUESTED",
+                event.requestedBy(),
+                event.requestedAt(),
+                event.correlationId(),
+                null);
     }
 
     @ApplicationModuleListener
     void on(InvestigationStateChanged event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.INVESTIGATION, event.investigationId().value(),
-                "INVESTIGATION_" + event.status().name(), null, event.changedAt(), event.correlationId(), event.causationId());
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.INVESTIGATION,
+                event.investigationId().value(),
+                "INVESTIGATION_" + event.status().name(),
+                null,
+                event.changedAt(),
+                event.correlationId(),
+                event.causationId());
     }
 }

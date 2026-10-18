@@ -89,13 +89,15 @@ class InvestigationLifecycleIntegrationTest {
             var completed = processing.complete(TENANT, id, result(), "contract-test-model", "reconflow-v1");
             assertThat(completed.status()).isEqualTo(InvestigationStatus.COMPLETED);
             assertThat(completed.result()).isEqualTo(result());
-            assertThat(processing.complete(TENANT, id, result(), "other-model", "other-prompt")).isEqualTo(completed);
+            assertThat(processing.complete(TENANT, id, result(), "other-model", "other-prompt"))
+                    .isEqualTo(completed);
             assertThat(processing.fail(TENANT, id, "Late worker failure")).isEqualTo(completed);
             assertThat(processing.start(TENANT, id)).isEqualTo(completed);
             assertThat(queries.forCase(TENANT, caseId)).containsExactly(completed);
             assertThat(cases.getCase(TENANT, caseId)).isEqualTo(originalCase);
-            await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
-                    assertThat(audit.forResource(TENANT, AuditResourceType.INVESTIGATION, id.value(), Long.MAX_VALUE, 50))
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(audit.forResource(
+                                    TENANT, AuditResourceType.INVESTIGATION, id.value(), Long.MAX_VALUE, 50))
                             .hasSize(3));
         }
     }
@@ -129,15 +131,18 @@ class InvestigationLifecycleIntegrationTest {
                         INSERT INTO cases.cases
                         (id, tenant_id, reconciliation_id, status, opened_at, updated_at, notes, version)
                         VALUES (?, ?, ?, 'OPEN', now(), now(), '[]', 0)
-                        """)
-                .params(id.value(), TENANT.value(), UUID.randomUUID()).update();
+                        """).params(id.value(), TENANT.value(), UUID.randomUUID()).update();
         return id;
     }
 
     private InvestigationResult result() {
-        return new InvestigationResult("The reported fee explains the gross/net difference.", "Provider-reported fee",
+        return new InvestigationResult(
+                "The reported fee explains the gross/net difference.",
+                "Provider-reported fee",
                 List.of(new InvestigationEvidence("settlement:demo", "Reported gross 100, fee 3.20, net 96.80")),
-                ResolutionType.ACCEPTED_FEE_VARIANCE, 0.8, List.of("The contractual fee policy still needs human review."),
+                ResolutionType.ACCEPTED_FEE_VARIANCE,
+                0.8,
+                List.of("The contractual fee policy still needs human review."),
                 new InvestigationJudgment(true, 0.95, 0.95, 0));
     }
 

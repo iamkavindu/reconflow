@@ -3,6 +3,9 @@ package dev.iamkavindu.reconflow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.iamkavindu.reconflow.cases.CaseQueries;
+import dev.iamkavindu.reconflow.cases.CaseStatus;
+import dev.iamkavindu.reconflow.cases.CaseView;
 import dev.iamkavindu.reconflow.provider.IngestProviderEventCommand;
 import dev.iamkavindu.reconflow.provider.ProviderTransactionCommands;
 import dev.iamkavindu.reconflow.provider.ProviderTransactionStatus;
@@ -58,6 +61,9 @@ class MatchingWindowExpiryIntegrationTest {
     @Autowired
     private ReconciliationMaintenance maintenance;
 
+    @Autowired
+    private CaseQueries cases;
+
     @BeforeEach
     void resetClock() {
         clock.current.set(START);
@@ -92,6 +98,7 @@ class MatchingWindowExpiryIntegrationTest {
         maintenance.processExpiredMatchingWindows();
         assertThat(queries.getReconciliation(TENANT, transaction.transactionId()))
                 .isEqualTo(unmatched);
+        assertThat(awaitCase(unmatched).status()).isEqualTo(CaseStatus.OPEN);
     }
 
     @Test
@@ -114,6 +121,7 @@ class MatchingWindowExpiryIntegrationTest {
         assertThatThrownBy(() -> queries.getProviderReconciliation(
                         new TenantId(UUID.randomUUID()), payment.providerTransactionId()))
                 .isInstanceOf(NoSuchElementException.class);
+        assertThat(awaitCase(unmatched).status()).isEqualTo(CaseStatus.OPEN);
     }
 
     @Test
@@ -135,6 +143,20 @@ class MatchingWindowExpiryIntegrationTest {
         maintenance.processExpiredMatchingWindows();
         assertThat(queries.getProviderReconciliation(TENANT, payment.providerTransactionId()))
                 .isEqualTo(matched);
+        assertThatThrownBy(() -> cases.getCaseForReconciliation(TENANT, matched.reconciliationId()))
+                .isInstanceOf(NoSuchElementException.class);
+    }
+
+    private CaseView awaitCase(ReconciliationView reconciliation) throws InterruptedException {
+        Instant deadline = Instant.now().plusSeconds(10);
+        while (Instant.now().isBefore(deadline)) {
+            try {
+                return cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId());
+            } catch (NoSuchElementException ignored) {
+                Thread.sleep(25);
+            }
+        }
+        throw new AssertionError("exception case was not opened");
     }
 
     private ProviderTransactionView provider(String reference) {

@@ -52,7 +52,9 @@ class ProviderEventKafkaIntegrationTest {
 
         kafkaTemplate.send(TOPIC, 0, providerEventId, message).get();
         kafkaTemplate.send(TOPIC, 0, providerEventId, message).get();
-        kafkaTemplate.send(TOPIC, 0, barrierEventId, validMessage(barrierEventId)).get();
+        kafkaTemplate
+                .send(TOPIC, 0, barrierEventId, validMessage(barrierEventId))
+                .get();
 
         await(() -> providerTransactionCount(barrierEventId) == 1, Duration.ofSeconds(15));
 

@@ -2,7 +2,6 @@ package dev.iamkavindu.reconflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.iamkavindu.reconflow.provider.events.ProviderTransactionRecorded;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -20,15 +19,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.event.ApplicationEvents;
-import org.springframework.test.context.event.RecordApplicationEvents;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "reconflow.kafka.enabled=true")
-@RecordApplicationEvents
 @Testcontainers
 class ProviderEventKafkaIntegrationTest {
 
@@ -48,22 +44,19 @@ class ProviderEventKafkaIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private ApplicationEvents applicationEvents;
-
     @Test
     void consumesVersionedProviderEventIntoIdempotentProviderBoundary() throws Exception {
         String providerEventId = "evt-kafka-" + UUID.randomUUID();
+        String message = validMessage(providerEventId);
+        String barrierEventId = "evt-barrier-" + UUID.randomUUID();
 
-        kafkaTemplate
-                .send(TOPIC, providerEventId, validMessage(providerEventId))
-                .get();
+        kafkaTemplate.send(TOPIC, 0, providerEventId, message).get();
+        kafkaTemplate.send(TOPIC, 0, providerEventId, message).get();
+        kafkaTemplate.send(TOPIC, 0, barrierEventId, validMessage(barrierEventId)).get();
 
-        await(() -> providerTransactionCount(providerEventId) == 1, Duration.ofSeconds(10));
+        await(() -> providerTransactionCount(barrierEventId) == 1, Duration.ofSeconds(15));
 
-        assertThat(applicationEvents.stream(ProviderTransactionRecorded.class)
-                        .filter(event -> event.providerTransactionReference().equals("pi-" + providerEventId)))
-                .hasSize(1);
+        assertThat(providerTransactionCount(providerEventId)).isEqualTo(1);
     }
 
     @Test

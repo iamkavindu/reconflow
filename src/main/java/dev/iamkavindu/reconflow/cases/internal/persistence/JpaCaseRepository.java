@@ -39,9 +39,7 @@ class JpaCaseRepository implements CaseRepository {
 
     @Override
     public Optional<Case> findByTenantIdAndId(TenantId tenantId, CaseId caseId) {
-        return repository
-                .findByTenantIdAndId(tenantId.value(), caseId.value())
-                .map(CasePersistenceMapper::toDomain);
+        return repository.findByTenantIdAndId(tenantId.value(), caseId.value()).map(CasePersistenceMapper::toDomain);
     }
 
     @Override

@@ -32,3 +32,22 @@ jobs:
 
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Verify Compose Kafka delivery
+        run: |
+          docker compose up -d kafka
+          ./mvnw --batch-mode --no-transfer-progress -Dtest=ProviderSimulationIntegrationTest -Dreconflow.test.kafka-bootstrap-servers=localhost:9092 test
+
+      - name: Capture Kafka diagnostics
+        if: failure()
+        run: docker compose logs --no-color kafka
+
+      - name: Stop Compose services
+        if: always()
+        run: docker compose down
+
+      - name: Capture formatting diagnostic
+        if: failure()
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress spotless:apply
+          git diff -- src

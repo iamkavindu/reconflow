@@ -14,8 +14,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(OperationNotAuthorizedException.class)
     ProblemDetail forbidden() {
-        return ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN, "This operation requires an analyst or administrator.");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "This operation is not permitted for your role.");
     }
 
     @ExceptionHandler(NoSuchElementException.class)

@@ -25,10 +25,12 @@ An analyst must use the normal validated resolution endpoint to resolve a case.
 Lifecycle events remain auditable. Outstanding worker event publications can be
 republished on restart when the AI profile is active.
 
-This slice provides the documentation-search port but no indexed documents yet.
-Missing policy evidence is stated as a limitation: a provider-reported fee does
-not establish the contractual fee tariff. Tenant-isolated document retrieval is
-the next implementation slice.
+The AI profile also enables tenant-scoped document retrieval. Configure
+`AI_EMBEDDING_MODEL` with a model supporting 1536-dimensional embeddings and use
+the provided pgvector PostgreSQL image. See [knowledge retrieval](knowledge-retrieval.md)
+for document imports, citations and retrieval boundaries. Missing policy evidence
+is stated as a limitation: a provider-reported fee does not establish the
+contractual fee tariff.
 
 Integration tests exercise the actual model and judgment HTTP clients against
 local protocol fixtures and real PostgreSQL. They cover read tools, bounded

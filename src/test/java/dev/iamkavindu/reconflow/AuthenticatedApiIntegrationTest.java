@@ -276,6 +276,70 @@ class AuthenticatedApiIntegrationTest {
     }
 
     @Test
+    void operationalListsAndDashboardUseAuthenticatedTenantAndBoundedFilters() throws Exception {
+        var created = mvc.perform(post("/api/transactions")
+                        .header("Authorization", token("admin", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transaction()))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String location = created.getResponse().getHeader("Location");
+        String id = location.substring(location.lastIndexOf('/') + 1);
+        mvc.perform(get("/api/transactions")
+                        .param("transactionId", id)
+                        .header("Authorization", token("viewer", TENANT))
+                        .header("X-Tenant-Id", OTHER_TENANT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].transactionId.value").value(id));
+        mvc.perform(get("/api/transactions")
+                        .param("transactionId", id)
+                        .header("Authorization", token("other", OTHER_TENANT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        for (String path :
+                new String[] {"/api/transactions", "/api/provider-transactions", "/api/reconciliations", "/api/cases"
+                }) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).param("limit", "101").header("Authorization", token("viewer", TENANT)))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(get(path)
+                            .param("from", "2026-10-20T00:00:00Z")
+                            .param("to", "2026-10-19T00:00:00Z")
+                            .header("Authorization", token("viewer", TENANT)))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/dashboard")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/dashboard").header("Authorization", token("viewer", TENANT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transactionsProcessed").isNumber());
+        mvc.perform(get("/api/reconciliations")
+                        .param("status", "INVALID")
+                        .header("Authorization", token("viewer", TENANT)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/cases").param("status", "INVALID").header("Authorization", token("viewer", TENANT)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void documentImportsRequireAdministratorMembership() throws Exception {
+        String source = """
+                {"kind":"POLICY","title":"Fee review","content":"An analyst must verify the evidence."}
+                """;
+        for (String subject : new String[] {"viewer", "analyst"}) {
+            mvc.perform(post("/api/knowledge/documents")
+                            .header("Authorization", token(subject, TENANT))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(source))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/api/knowledge/documents")
+                        .header("Authorization", token("admin", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(source))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
     void settlementImportsUseMembershipPermissionsAndTenant() throws Exception {
         String source = """
                 {"provider":"stripe","providerSettlementReference":"%s","currency":"USD",

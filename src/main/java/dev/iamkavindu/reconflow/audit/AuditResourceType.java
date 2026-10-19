@@ -6,5 +6,6 @@ public enum AuditResourceType {
     SETTLEMENT,
     RECONCILIATION,
     CASE,
-    INVESTIGATION
+    INVESTIGATION,
+    KNOWLEDGE_DOCUMENT
 }

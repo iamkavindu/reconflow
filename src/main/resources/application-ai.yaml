@@ -1,6 +1,8 @@
 reconflow:
   ai:
     enabled: true
+    knowledge-enabled: true
+    embedding-model: ${AI_EMBEDDING_MODEL}
     model: ${AI_MODEL}
     api-key: ${AI_API_KEY}
     base-url: ${AI_BASE_URL:https://api.openai.com/v1}

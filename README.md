@@ -68,8 +68,8 @@ financial sources. If an earlier partial run's window expired before its
 counterparts arrived, choose a new run ID; historical determinations stay intact.
 
 See [the demo guide](docs/demo.md) for tokens, optional AI investigation and
-human resolution. The analyst/admin workspace exposes the operational workflows. Observability
-is a subsequent MVP increment.
+human resolution. The analyst/admin workspace exposes the operational workflows. See [observability](docs/observability.md) for operator health, metrics, logs
+and a reproducible trace through the asynchronous workflow.
 
 ## Verify
 

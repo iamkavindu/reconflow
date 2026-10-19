@@ -115,6 +115,15 @@ class AuthenticatedApiIntegrationTest {
     }
 
     @Test
+    void operatorEndpointsAreNotExposedOnTheApplicationListenerByDefault() throws Exception {
+        for (String path : new String[] {"/actuator/health", "/actuator/prometheus", "/actuator/env"}) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).header("Authorization", token("admin", TENANT)))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Test
     void requiresVerifiedBearerWithIssuerAudienceExpiryAndMembership() throws Exception {
         mvc.perform(get("/api/session")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/session").header("Authorization", "Basic YWRtaW46YWRtaW4="))

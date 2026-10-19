@@ -1,0 +1,44 @@
+management:
+  server:
+    address: 127.0.0.1
+    port: ${MANAGEMENT_PORT:9091}
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,providerKafka
+  metrics:
+    tags:
+      application: reconflow
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+    export:
+      otlp:
+        enabled: true
+  opentelemetry:
+    resource-attributes:
+      service.name: reconflow
+    tracing:
+      export:
+        schedule-delay: 1s
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+logging:
+  structured:
+    format:
+      console: ecs
+  level:
+    org.apache.kafka.clients.admin.AdminClientConfig: WARN

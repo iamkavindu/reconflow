@@ -1,6 +1,9 @@
 spring:
   application:
     name: reconflow
+  task:
+    execution:
+      propagate-context: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -10,7 +13,10 @@ spring:
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    template:
+      observation-enabled: true
     listener:
+      observation-enabled: true
       ack-mode: record
     producer:
       acks: all
@@ -37,3 +43,19 @@ reconflow:
     provider-events-topic: reconflow.provider-events.v1
   tenancy:
     current-tenant-id: 00000000-0000-0000-0000-000000000001
+
+management:
+  server:
+    port: -1
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      otlp:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false

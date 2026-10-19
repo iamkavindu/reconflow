@@ -19,6 +19,7 @@ class ReconciliationPolicyTest {
     @Test
     void refusesWindowsThatCannotWaitForACounterpart() {
         assertThatThrownBy(() -> new ReconciliationPolicy(Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ReconciliationPolicy(Duration.ofSeconds(-1))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ReconciliationPolicy(Duration.ofSeconds(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

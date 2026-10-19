@@ -3,8 +3,8 @@ package dev.iamkavindu.reconflow.reconciliation.internal.application;
 import dev.iamkavindu.reconflow.reconciliation.internal.domain.MatchingWindow;
 import java.time.Duration;
 import java.time.Instant;
-import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Component
 class ReconciliationPolicy {

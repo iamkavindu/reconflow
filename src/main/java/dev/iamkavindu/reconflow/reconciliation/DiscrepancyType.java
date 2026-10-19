@@ -1,0 +1,13 @@
+package dev.iamkavindu.reconflow.reconciliation;
+
+public enum DiscrepancyType {
+    AMOUNT_MISMATCH,
+    CURRENCY_MISMATCH,
+    MISSING_PROVIDER_TRANSACTION,
+    MISSING_INTERNAL_TRANSACTION,
+    DUPLICATE_TRANSACTION,
+    FEE_VARIANCE,
+    REFUND_MISMATCH,
+    STATUS_MISMATCH,
+    TIME_WINDOW_MISMATCH
+}

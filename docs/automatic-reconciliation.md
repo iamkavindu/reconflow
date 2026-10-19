@@ -25,7 +25,6 @@ decision timestamp, and expected/actual result for every evaluated rule. It emit
 `ReconciliationMatched` once. A successful match does not open a case or modify
 either source financial record.
 
-In this incremental slice, missing, ambiguous, expired, and conflicting candidates
-do not auto-match. They remain pending until the discrepancy/expiry slices add
-their required `REVIEW_REQUIRED` / `UNMATCHED` transitions and case creation.
-This is not the final behavior for those MVP scenarios.
+Conflicting or ambiguous candidates now produce `REVIEW_REQUIRED` with discrepancy
+evidence. Missing counterparts produce `UNMATCHED` after the arrival window.
+These exceptions open cases for human review; see [exception workflow](exception-workflow.md).

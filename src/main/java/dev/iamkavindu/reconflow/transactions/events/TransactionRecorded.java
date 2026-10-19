@@ -12,7 +12,18 @@ public record TransactionRecorded(
         TransactionId transactionId,
         String businessReference,
         Instant recordedAt,
-        UUID correlationId) {
+        UUID correlationId,
+        String recordedBy) {
+
+    public TransactionRecorded(
+            UUID eventId,
+            TenantId tenantId,
+            TransactionId transactionId,
+            String businessReference,
+            Instant recordedAt,
+            UUID correlationId) {
+        this(eventId, tenantId, transactionId, businessReference, recordedAt, correlationId, null);
+    }
 
     public TransactionRecorded {
         Objects.requireNonNull(eventId, "eventId must not be null");

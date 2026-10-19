@@ -15,9 +15,16 @@ public record ReconciliationView(
         Instant expiresAt,
         ProviderTransactionId providerTransactionId,
         Instant matchedAt,
-        List<RuleEvaluation> ruleEvaluations) {
+        List<RuleEvaluation> ruleEvaluations,
+        Instant decidedAt,
+        List<ProviderTransactionId> comparedProviderTransactionIds,
+        List<Discrepancy> discrepancies,
+        String businessReference,
+        ProviderTransactionId providerOriginId) {
 
     public ReconciliationView {
         ruleEvaluations = List.copyOf(ruleEvaluations);
+        comparedProviderTransactionIds = List.copyOf(comparedProviderTransactionIds);
+        discrepancies = List.copyOf(discrepancies);
     }
 }

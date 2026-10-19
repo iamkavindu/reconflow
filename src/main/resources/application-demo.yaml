@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/reconflow
+    username: reconflow
+    password: reconflow
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo
+reconflow:
+  kafka:
+    enabled: false

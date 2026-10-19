@@ -20,8 +20,14 @@ class ReconciliationJpaEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "transaction_id", nullable = false)
+    @Column(name = "transaction_id")
     private UUID transactionId;
+
+    @Column(name = "business_reference", nullable = false, length = 100)
+    private String businessReference;
+
+    @Column(name = "provider_origin_id")
+    private UUID providerOriginId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -42,6 +48,9 @@ class ReconciliationJpaEntity {
     @Column(name = "rule_evaluations", columnDefinition = "text")
     private String ruleEvaluations;
 
+    @Column(name = "exception_decision", columnDefinition = "text")
+    private String exceptionDecision;
+
     protected ReconciliationJpaEntity() {}
 
     ReconciliationJpaEntity(
@@ -53,7 +62,10 @@ class ReconciliationJpaEntity {
             Instant expiresAt,
             UUID providerTransactionId,
             Instant matchedAt,
-            String ruleEvaluations) {
+            String ruleEvaluations,
+            String exceptionDecision,
+            String businessReference,
+            UUID providerOriginId) {
         this.id = id;
         this.tenantId = tenantId;
         this.transactionId = transactionId;
@@ -63,6 +75,21 @@ class ReconciliationJpaEntity {
         this.providerTransactionId = providerTransactionId;
         this.matchedAt = matchedAt;
         this.ruleEvaluations = ruleEvaluations;
+        this.exceptionDecision = exceptionDecision;
+        this.businessReference = businessReference;
+        this.providerOriginId = providerOriginId;
+    }
+
+    String businessReference() {
+        return businessReference;
+    }
+
+    UUID providerOriginId() {
+        return providerOriginId;
+    }
+
+    String exceptionDecision() {
+        return exceptionDecision;
     }
 
     UUID providerTransactionId() {

@@ -1,0 +1,13 @@
+reconflow:
+  ai:
+    enabled: true
+    model: ${AI_MODEL}
+    api-key: ${AI_API_KEY}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    typesafe-api-key: ${TYPESAFE_API_KEY}
+    typesafe-base-url: ${TYPESAFE_BASE_URL:https://api.typesafe.ai}
+
+spring:
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true

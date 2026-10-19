@@ -1,12 +1,18 @@
 package dev.iamkavindu.reconflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
+import dev.iamkavindu.reconflow.provider.IngestProviderEventCommand;
+import dev.iamkavindu.reconflow.provider.ProviderTransactionCommands;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -15,16 +21,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "reconflow.kafka.enabled=true")
+@SpringBootTest(properties = {"reconflow.kafka.enabled=true", "reconflow.security.enabled=false"})
 @Testcontainers
 class ProviderEventKafkaIntegrationTest {
 
@@ -43,6 +51,38 @@ class ProviderEventKafkaIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoSpyBean
+    private ProviderTransactionCommands providerCommands;
+
+    @Test
+    void finishesBlockingRetriesBeforeProcessingLaterPartitionRecords() throws Exception {
+        String first = "evt-ordered-first-" + UUID.randomUUID();
+        String second = "evt-ordered-second-" + UUID.randomUUID();
+        var attempts = new AtomicInteger();
+        var deliveries = new CopyOnWriteArrayList<String>();
+        doAnswer(invocation -> {
+                    IngestProviderEventCommand command = invocation.getArgument(0);
+                    if (command.eventId().equals(first)) {
+                        deliveries.add(first);
+                        if (attempts.incrementAndGet() < 3) {
+                            throw new TransientDataAccessResourceException("simulated temporary database failure");
+                        }
+                    } else if (command.eventId().equals(second)) {
+                        deliveries.add(second);
+                    }
+                    return invocation.callRealMethod();
+                })
+                .when(providerCommands)
+                .ingestProviderEvent(any());
+
+        kafkaTemplate.send(TOPIC, 0, first, validMessage(first)).get();
+        kafkaTemplate.send(TOPIC, 0, second, validMessage(second)).get();
+        await(() -> providerTransactionCount(second) == 1, Duration.ofSeconds(15));
+
+        assertThat(deliveries).containsExactly(first, first, first, second);
+        assertThat(providerTransactionCount(first)).isEqualTo(1);
+    }
 
     @Test
     void consumesVersionedProviderEventIntoIdempotentProviderBoundary() throws Exception {

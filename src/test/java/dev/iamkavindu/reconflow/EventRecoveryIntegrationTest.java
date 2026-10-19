@@ -41,12 +41,13 @@ class EventRecoveryIntegrationTest {
         ATTEMPTS.set(0);
         UUID transactionId;
         try (var first = start()) {
-            var transaction = first.getBean(TransactionCommands.class).recordTransaction(new RecordTransactionCommand(
-                    "RESTART-" + UUID.randomUUID(),
-                    dev.iamkavindu.reconflow.transactions.TransactionType.PAYMENT,
-                    new BigDecimal("100.00"),
-                    Currency.getInstance("USD"),
-                    Instant.now()));
+            var transaction = first.getBean(TransactionCommands.class)
+                    .recordTransaction(new RecordTransactionCommand(
+                            "RESTART-" + UUID.randomUUID(),
+                            dev.iamkavindu.reconflow.transactions.TransactionType.PAYMENT,
+                            new BigDecimal("100.00"),
+                            Currency.getInstance("USD"),
+                            Instant.now()));
             transactionId = transaction.transactionId().value();
             await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
                 assertThat(ATTEMPTS.get()).isEqualTo(1);
@@ -62,11 +63,13 @@ class EventRecoveryIntegrationTest {
                 assertThat(publications(restarted, false)).isZero();
                 assertThat(publications(restarted, true)).isEqualTo(1);
             });
-            assertThat(restarted.getBean(JdbcClient.class)
-                    .sql("select count(*) from transactions.transactions where id = :id")
-                    .param("id", transactionId)
-                    .query(Long.class)
-                    .single()).isEqualTo(1);
+            assertThat(restarted
+                            .getBean(JdbcClient.class)
+                            .sql("select count(*) from transactions.transactions where id = :id")
+                            .param("id", transactionId)
+                            .query(Long.class)
+                            .single())
+                    .isEqualTo(1);
         }
     }
 

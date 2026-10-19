@@ -276,6 +276,25 @@ class AuthenticatedApiIntegrationTest {
     }
 
     @Test
+    void documentImportsRequireAdministratorMembership() throws Exception {
+        String source = """
+                {"kind":"POLICY","title":"Fee review","content":"An analyst must verify the evidence."}
+                """;
+        for (String subject : new String[] {"viewer", "analyst"}) {
+            mvc.perform(post("/api/knowledge/documents")
+                            .header("Authorization", token(subject, TENANT))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(source))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/api/knowledge/documents")
+                        .header("Authorization", token("admin", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(source))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
     void settlementImportsUseMembershipPermissionsAndTenant() throws Exception {
         String source = """
                 {"provider":"stripe","providerSettlementReference":"%s","currency":"USD",

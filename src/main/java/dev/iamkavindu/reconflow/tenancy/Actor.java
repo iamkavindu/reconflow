@@ -18,4 +18,10 @@ public record Actor(TenantId tenantId, String subject, UserRole role) {
             throw new OperationNotAuthorizedException("an analyst or administrator role is required");
         }
     }
+
+    public void requireAdmin() {
+        if (role != UserRole.ADMIN) {
+            throw new OperationNotAuthorizedException("an administrator role is required");
+        }
+    }
 }

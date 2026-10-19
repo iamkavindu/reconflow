@@ -127,8 +127,7 @@ class AiInvestigationIntegrationTest {
 
     @Test
     void keepsFinancialEventExecutionSeparateFromModelCalls() {
-        assertThat(context.getBean("applicationTaskExecutor"))
-                .isNotSameAs(context.getBean("investigationExecutor"));
+        assertThat(context.getBean("applicationTaskExecutor")).isNotSameAs(context.getBean("investigationExecutor"));
     }
 
     @Test

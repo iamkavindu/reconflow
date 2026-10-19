@@ -54,12 +54,32 @@ def respond(path, body):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def body(self):
+        self.connection.settimeout(10)
+        if self.headers.get('Transfer-Encoding', '').lower() == 'chunked':
+            parts, total = [], 0
+            while True:
+                size = int(self.rfile.readline(128).split(b';', 1)[0], 16)
+                if size == 0:
+                    for _ in range(20):
+                        if self.rfile.readline(2048) == b'\r\n':
+                            return b''.join(parts)
+                    raise ValueError('Fixture trailers exceed their input budget')
+                total += size
+                if size < 0 or total > 300000:
+                    raise ValueError('Fixture request exceeds its input budget')
+                chunk = self.rfile.read(size)
+                if len(chunk) != size or self.rfile.read(2) != b'\r\n':
+                    raise ValueError('Invalid fixture chunk')
+                parts.append(chunk)
+        size = int(self.headers.get('Content-Length', '0'))
+        if not 0 < size <= 300000:
+            raise ValueError('Fixture request exceeds its input budget')
+        return self.rfile.read(size)
+
     def do_POST(self):
         try:
-            size = int(self.headers.get('Content-Length', '0'))
-            if not 0 < size <= 300000:
-                raise ValueError('Fixture request exceeds its input budget')
-            payload = respond(self.path, json.loads(self.rfile.read(size)))
+            payload = respond(self.path, json.loads(self.body()))
             status = 200
         except (KeyError, ValueError, TypeError) as error:
             payload, status = {'error': str(error)}, 400

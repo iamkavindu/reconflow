@@ -47,6 +47,10 @@ reconflow:
 management:
   server:
     port: -1
+  otlp:
+    metrics:
+      export:
+        enabled: false
   tracing:
     export:
       otlp:

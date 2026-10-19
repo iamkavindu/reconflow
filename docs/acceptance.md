@@ -133,10 +133,12 @@ in the implementation environment, where these service settings are unavailable.
 
 The required `verify` job runs the Maven suite and restart recovery test, Compose
 Kafka delivery, all eight scenarios and idempotent replay, two ordinary browser
-checks, real exported telemetry and broker-down health behavior. It then restarts
-Kafka and launches the packaged application with `demo,ai`, points actual HTTP
+checks and real exported telemetry. After waiting for application shutdown, it
+launches the packaged application with `demo,ai,observability`, points actual HTTP
 clients at `dev/ai_fixture.py`, runs the strengthened investigation demo and the
 AI-enabled browser check, and records JSON evidence/screenshots as artifacts.
+The broker-down readiness/liveness check runs last, so broker recovery does not
+consume a subsequent scenario's short demo matching window.
 
 The fixture is loopback-only, external to the application JAR, and used only in
 CI. Its vectors, recommendations and judge scores are fixed. It proves service

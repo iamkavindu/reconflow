@@ -31,8 +31,8 @@ directly. Producer acknowledgments, idempotence and bounded send timeouts provid
 explicit delivery results. Disabled or uncertain delivery returns a safe `503`;
 retry with the same source identity because a timeout does not prove rejection.
 
-Compose now includes the same Kafka image used in integration tests. The `demo`
-profile connects to its localhost listener. Broker logs use a named data volume;
+Compose includes a Kafka 3.8 broker using the JVM image's writable data directory.
+The `demo` profile connects to its localhost listener. Broker logs use a named data volume;
 PostgreSQL continues to own ingestion idempotency. CI also runs the HTTP-to-Kafka
 integration tests against the actual Compose broker configuration. This remains
 a simulator; it does not call a real provider or move funds.

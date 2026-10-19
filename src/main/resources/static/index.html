@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>ReconFlow — Payment operations</title>
+  <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header><a class="brand" href="/">ReconFlow<span>Payment operations</span></a><div id="identity"></div><button id="session-action" type="button" disabled>Sign in</button></header>
+  <div class="layout">
+    <nav aria-label="Operations" id="navigation" hidden>
+      <button data-view="dashboard" aria-current="page">Overview</button>
+      <button data-view="transactions">Internal transactions</button>
+      <button data-view="provider-transactions">Provider records</button>
+      <button data-view="reconciliations">Reconciliations</button>
+      <button data-view="cases">Exception cases</button>
+      <button data-view="activity" data-write hidden>Record activity</button>
+      <button data-view="knowledge" data-admin hidden>Documentation</button>
+    </nav>
+    <main id="main" tabindex="-1">
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section id="content"><p class="eyebrow">RECONCILIATION & EXCEPTIONS</p><h1>Clear records.<br>Explainable decisions.</h1><p class="intro">Compare payment activity, investigate discrepancies, and keep every human decision traceable.</p><p>Sign in to access your organization’s operations workspace.</p></section>
+    </main>
+  </div>
+  <footer>AI investigates and proposes. Authorized analysts decide.</footer>
+</body>
+</html>

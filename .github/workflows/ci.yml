@@ -64,6 +64,8 @@ jobs:
           assert replay["dashboard"] == first["dashboard"]
           print("All eight scenarios, both tenant boundaries, audit checks and idempotent replay passed.")
           PY
+          npm --prefix dev/browser ci --ignore-scripts --no-audit --no-fund
+          (cd dev/browser && npx playwright install --with-deps chromium && npm test)
 
       - name: Capture Kafka diagnostics
         if: failure()
@@ -74,3 +76,9 @@ jobs:
       - name: Stop Compose services
         if: always()
         run: docker compose down
+
+      - name: Capture formatting diagnostic
+        if: failure()
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress spotless:apply
+          git diff -- src

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nimbusds.jose.JOSEException;
@@ -93,6 +94,22 @@ class AuthenticatedApiIntegrationTest {
         membership(TENANT, "analyst", "ANALYST");
         membership(TENANT, "viewer", "VIEWER");
         membership(OTHER_TENANT, "other", "ANALYST");
+    }
+
+    @Test
+    void exposesOnlyTheBrowserShellAndPublicIssuerSettingsWithoutAuthentication() throws Exception {
+        mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", org.hamcrest.Matchers.containsString("frame-ancestors 'none'")));
+        mvc.perform(get("/app.js")).andExpect(status().isOk());
+        mvc.perform(get("/auth.js")).andExpect(status().isOk());
+        mvc.perform(get("/app.css")).andExpect(status().isOk());
+        mvc.perform(get("/ui/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issuer").value(ISSUER))
+                .andExpect(jsonPath("$.clientId").value("reconflow"));
+        mvc.perform(get("/api/session")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/cases")).andExpect(status().isUnauthorized());
     }
 
     @Test

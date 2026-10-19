@@ -21,6 +21,10 @@ docker compose up -d
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 ```
 
+Open `http://localhost:8080` and sign in through Keycloak. The local demo
+accounts are `admin`, `analyst`, and `viewer`, with password `demo-password`.
+See [the workspace guide](docs/analyst-ui.md) for browser/session behavior.
+
 In another terminal:
 
 ```sh
@@ -64,8 +68,8 @@ financial sources. If an earlier partial run's window expired before its
 counterparts arrived, choose a new run ID; historical determinations stay intact.
 
 See [the demo guide](docs/demo.md) for tokens, optional AI investigation and
-human resolution. The analyst/admin UI and observability stack are subsequent
-MVP increments; the current demonstration uses the application APIs.
+human resolution. The analyst/admin workspace exposes the operational workflows. Observability
+is a subsequent MVP increment.
 
 ## Verify
 

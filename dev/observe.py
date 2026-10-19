@@ -118,9 +118,10 @@ def main():
                     record = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if (record.get('workflow.action') == 'CASE_OPENED' and record.get('workflow.resource_id') == case_id
+                workflow = record.get('workflow', {})
+                if (workflow.get('action') == 'CASE_OPENED' and workflow.get('resource_id') == case_id
                         and record.get('trace.id', record.get('traceId')) == trace_id):
-                    assert record.get('workflow.event_id') and record.get('workflow.correlation_id')
+                    assert workflow.get('event_id') and workflow.get('correlation_id')
                     return True
             return None
         wait(logged, 'committed structured audit log correlated to the exported trace')

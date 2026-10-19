@@ -29,7 +29,9 @@ class DashboardService implements DashboardQueries {
     public Dashboard get(TenantId tenantId) {
         var determinations = reconciliations.counts(tenantId);
         var workflows = cases.counts(tenantId);
-        return new Dashboard(transactions.count(tenantId), determinations.getOrDefault(ReconciliationStatus.MATCHED, 0L),
+        return new Dashboard(
+                transactions.count(tenantId),
+                determinations.getOrDefault(ReconciliationStatus.MATCHED, 0L),
                 determinations.getOrDefault(ReconciliationStatus.REVIEW_REQUIRED, 0L),
                 determinations.getOrDefault(ReconciliationStatus.UNMATCHED, 0L),
                 workflows.getOrDefault(CaseStatus.OPEN, 0L) + workflows.getOrDefault(CaseStatus.UNDER_REVIEW, 0L),

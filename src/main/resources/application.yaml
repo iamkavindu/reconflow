@@ -1,6 +1,9 @@
 spring:
   application:
     name: reconflow
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
   task:
     execution:
       propagate-context: true

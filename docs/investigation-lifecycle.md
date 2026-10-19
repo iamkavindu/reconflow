@@ -26,8 +26,9 @@ text lengths and collection sizes are bounded. The result and its evidence are
 immutable. Confidence and a suggested resolution are advisory information, not
 authorization to take a financial or case action.
 
-This slice supplies the lifecycle ports and persistence. The following AI
-execution slice wires HTTP requests, bounded read-only tools and generation to
-these ports. Integration tests cover concurrent request deduplication, immutable
+The AI execution adapter connects HTTP requests, bounded read-only tools and
+generation to these lifecycle ports. See [AI investigations](ai-investigations.md)
+for execution settings and [acceptance](acceptance.md) for the end-to-end checks.
+Integration tests cover concurrent request deduplication, immutable
 completion, failed-attempt history, role and tenant checks, resolved-case
 protection and audit delivery.

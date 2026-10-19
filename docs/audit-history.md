@@ -3,7 +3,8 @@
 The audit module subscribes to committed transaction, provider, reconciliation
 and case events through Spring Modulith's persistent publication registry. An
 append is committed in the listener's own transaction; failed listeners remain
-eligible for redelivery. A unique tenant/event constraint makes repeated delivery
+eligible for redelivery and are replayed on restart under the base configuration.
+A unique tenant/event constraint makes repeated delivery
 produce one audit entry.
 
 Entries retain the source event identity and occurrence time, recording time,
@@ -22,7 +23,8 @@ Audit metadata links back to source records and case history rather than copying
 free-text notes, resolution evidence and financial payloads into another store.
 
 `GET /api/audit/{type}/{id}` reads within the authenticated tenant. Types are
-`TRANSACTION`, `PROVIDER_TRANSACTION`, `RECONCILIATION` and `CASE`. The newest
+`TRANSACTION`, `PROVIDER_TRANSACTION`, `SETTLEMENT`, `RECONCILIATION`, `CASE`,
+`INVESTIGATION` and `KNOWLEDGE_DOCUMENT`. The newest
 recorded entries are returned first, with a default limit of 50 and maximum of
 100. Set `before` to the last returned sequence to read older entries. Ordering
 reflects audit receipt, while `occurredAt` retains source-event chronology.

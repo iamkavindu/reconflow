@@ -9,9 +9,14 @@ The backend is a Java 25 / Spring Boot modular monolith with PostgreSQL,
 Spring Modulith's persistent event registry, Kafka provider ingestion, Keycloak
 OIDC authentication, and optional Spring AI / pgvector / TypeSafe Jev investigations.
 
+See the [architecture](docs/architecture.md) for module ownership, financial and
+AI authority boundaries, and failure recovery. The [MVP acceptance review](docs/acceptance.md)
+maps the agreed requirements to verification and documents the remaining live AI
+quality check. CI's AI fixtures establish integration behavior, not live quality.
+
 ## Start locally
 
-Install Java 25, Docker with Compose, and Python 3. The Maven wrapper is included.
+Install Java 25, Docker with Compose, and Python 3.10+. The Maven wrapper is included.
 For SDKMAN users, `.sdkmanrc` provides the repository's Java version:
 
 ```sh
@@ -67,9 +72,10 @@ can coexist. Reuse `--run-id` to replay a completed run without duplicating its
 financial sources. If an earlier partial run's window expired before its
 counterparts arrived, choose a new run ID; historical determinations stay intact.
 
-See [the demo guide](docs/demo.md) for tokens, optional AI investigation and
-human resolution. The analyst/admin workspace exposes the operational workflows. See [observability](docs/observability.md) for operator health, metrics, logs
-and a reproducible trace through the asynchronous workflow.
+See [the demo guide](docs/demo.md) for tokens, optional AI investigation and human
+resolution. The analyst/admin workspace exposes the operational workflows. See
+[observability](docs/observability.md) for operator health, metrics, logs and a
+reproducible trace through the asynchronous workflow.
 
 ## Verify
 
@@ -80,7 +86,9 @@ and a reproducible trace through the asynchronous workflow.
 Tests exercise real PostgreSQL/pgvector, Kafka and Keycloak through
 Testcontainers. Model-client tests use local protocol fixtures rather than live
 AI credentials. CI also checks the Compose broker and runs the complete demo
-against the application with real local OIDC authentication.
+against the application with real local OIDC authentication. Browser checks cover
+both AI-disabled behavior and an AI-enabled case investigation through cited
+evidence and explicit human resolution, using local AI protocol fixtures.
 
 ## API and architecture guides
 

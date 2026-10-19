@@ -14,20 +14,20 @@ service role checks and server-controlled actor and timestamps. A resolved case
 returns 409 on subsequent mutation. Financial source records and reconciliation
 determinations are not edited by these endpoints.
 
-This API slice uses stateless bearer headers only: no Basic authentication,
+The API uses stateless bearer headers only: no Basic authentication,
 session authentication or cookie credentials. CSRF is disabled for that chain.
-Browser sign-in will use authorization code with PKCE when the analyst UI is
-added. The local realm already restricts its browser callback to localhost and
+The analyst UI signs in with authorization code and S256 PKCE. The local realm
+restricts its browser callback to localhost and
 requires S256 PKCE. Direct password grants exist only for local CLI examples and
 the realm contract test; disable them outside the demo.
 
 ## Local setup
 
-Run `docker compose up -d` for PostgreSQL and Keycloak. With Java 25, run
+Run `docker compose up -d` for PostgreSQL, Keycloak and Kafka. With Java 25, run
 `./mvnw spring-boot:run -Dspring-boot.run.profiles=demo`. The demo profile seeds
-two tenants and four memberships, and disables the Kafka listener for this
-API-only setup. Provider integration tests continue to exercise real Kafka;
-enable it and configure `spring.kafka.bootstrap-servers` when running ingestion.
+two tenants and four memberships, and connects provider ingestion to the Compose
+broker at `localhost:9092`. It also shortens the new-record matching window to
+30 seconds for reproducible demonstrations.
 
 Keycloak is at http://localhost:8180. Demo users are `admin`, `analyst`, `viewer`
 and `other-analyst`, each with password `demo-password`. The last belongs to a
@@ -49,7 +49,7 @@ http://localhost:8080/api/session. OpenAPI JSON is at `/v3/api-docs` and Swagger
 UI at `/swagger-ui.html`; both require authentication. `/api/session` returns
 the effective tenant, subject and membership role. Configure `OIDC_ISSUER` and
 `OIDC_JWK_SET_URI` for another Keycloak deployment. Membership provisioning is
-application data managed by deployment SQL in this slice; it is not inferred
+application data managed by deployment SQL; it is not inferred
 from an administrator realm role. No registration or identity-management UI is
 introduced.
 

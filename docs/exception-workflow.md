@@ -41,9 +41,10 @@ audit module.
 
 Case mutations obtain identity and tenant from `CurrentActor` and require an
 `ANALYST` or `ADMIN` role. The default actor implementation rejects mutations.
-The authentication slice will supply the real authenticated actor; this slice
-does not expose unauthenticated case-mutation endpoints. Evidence references are
+OIDC and active database membership supply the authenticated actor. Case-mutation
+endpoints require bearer authentication. Evidence references are
 stored human-provided references, not authority to retrieve arbitrary records.
 
-Settlement/fee ingestion, authentication/API exposure, audit persistence, AI
-investigation, search/dashboard, and the analyst UI are subsequent MVP slices.
+See [settlement evidence](settlement-evidence.md), [audit history](audit-history.md),
+[AI investigation](ai-investigations.md), [search/dashboard](operational-search.md)
+and the [analyst UI](analyst-ui.md) for the supporting workflows.

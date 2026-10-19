@@ -1,10 +1,18 @@
 spring:
+  kafka:
+    bootstrap-servers: localhost:9092
   datasource:
     url: jdbc:postgresql://localhost:5432/reconflow
     username: reconflow
     password: reconflow
   flyway:
+    connect-retries: 30
     locations: classpath:db/migration,classpath:db/demo
 reconflow:
+  reconciliation:
+    matching-window: PT30S
   kafka:
-    enabled: false
+    enabled: true
+
+server:
+  address: 127.0.0.1

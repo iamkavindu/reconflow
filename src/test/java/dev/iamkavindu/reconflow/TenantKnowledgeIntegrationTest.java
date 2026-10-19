@@ -255,10 +255,12 @@ class TenantKnowledgeIntegrationTest {
                 UUID.randomUUID(),
                 UUID.randomUUID()));
         List<CaseView> found = new ArrayList<>();
-        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
-            var reconciliation = reconciliations.getReconciliation(TENANT, transaction.transactionId());
-            found.add(cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId()));
-        });
+        await().atMost(Duration.ofSeconds(10))
+                .ignoreException(NoSuchElementException.class)
+                .untilAsserted(() -> {
+                    var reconciliation = reconciliations.getReconciliation(TENANT, transaction.transactionId());
+                    found.add(cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId()));
+                });
         var original = found.getLast();
         var requested = investigations.request(original.caseId());
         await().atMost(Duration.ofSeconds(30))

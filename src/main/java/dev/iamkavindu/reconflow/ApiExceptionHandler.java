@@ -1,5 +1,6 @@
 package dev.iamkavindu.reconflow;
 
+import dev.iamkavindu.reconflow.provider.ProviderDeliveryUnavailableException;
 import dev.iamkavindu.reconflow.tenancy.OperationNotAuthorizedException;
 import java.util.NoSuchElementException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -15,6 +16,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(OperationNotAuthorizedException.class)
     ProblemDetail forbidden() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "This operation is not permitted for your role.");
+    }
+
+    @ExceptionHandler(ProviderDeliveryUnavailableException.class)
+    ProblemDetail deliveryUnavailable() {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Provider event delivery is unavailable. Retry using the same provider event identity.");
     }
 
     @ExceptionHandler(NoSuchElementException.class)

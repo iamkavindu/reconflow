@@ -262,16 +262,13 @@ class AuthenticatedApiIntegrationTest {
                         (id, tenant_id, case_id, status, requested_by, requested_at, version)
                         VALUES (?, ?, ?, 'REQUESTED', 'analyst', now(), 0)
                         """).params(investigationId, UUID.fromString(TENANT), caseId).update();
-        mvc.perform(get("/api/investigations/" + investigationId)
-                        .header("Authorization", token("viewer", TENANT)))
+        mvc.perform(get("/api/investigations/" + investigationId).header("Authorization", token("viewer", TENANT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.investigationId.value").value(investigationId.toString()));
-        mvc.perform(get("/api/cases/" + caseId + "/investigations")
-                        .header("Authorization", token("viewer", TENANT)))
+        mvc.perform(get("/api/cases/" + caseId + "/investigations").header("Authorization", token("viewer", TENANT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].investigationId.value").value(investigationId.toString()));
-        mvc.perform(get("/api/investigations/" + investigationId)
-                        .header("Authorization", token("other", OTHER_TENANT)))
+        mvc.perform(get("/api/investigations/" + investigationId).header("Authorization", token("other", OTHER_TENANT)))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/cases/" + caseId + "/investigations")
                         .header("Authorization", token("other", OTHER_TENANT)))

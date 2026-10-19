@@ -1,7 +1,7 @@
 package dev.iamkavindu.reconflow;
 
-import dev.iamkavindu.reconflow.tenancy.OperationNotAuthorizedException;
 import dev.iamkavindu.reconflow.provider.ProviderDeliveryUnavailableException;
+import dev.iamkavindu.reconflow.tenancy.OperationNotAuthorizedException;
 import java.util.NoSuchElementException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -20,7 +20,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ProviderDeliveryUnavailableException.class)
     ProblemDetail deliveryUnavailable() {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
                 "Provider event delivery is unavailable. Retry using the same provider event identity.");
     }
 

@@ -33,7 +33,11 @@ class KafkaProviderSimulation implements ProviderSimulationCommands {
     private final String topic;
     private final boolean enabled;
 
-    KafkaProviderSimulation(KafkaTemplate<String, String> kafka, JsonMapper json, CurrentActor currentActor, Clock clock,
+    KafkaProviderSimulation(
+            KafkaTemplate<String, String> kafka,
+            JsonMapper json,
+            CurrentActor currentActor,
+            Clock clock,
             @Value("${reconflow.kafka.provider-events-topic}") String topic,
             @Value("${reconflow.kafka.enabled:true}") boolean enabled) {
         this.kafka = kafka;
@@ -63,24 +67,43 @@ class KafkaProviderSimulation implements ProviderSimulationCommands {
         Objects.requireNonNull(command.amount());
         Objects.requireNonNull(command.currency());
         if ((long) command.amount().precision() - command.amount().scale() > 15
-                || command.amount().stripTrailingZeros().scale() > command.currency().getDefaultFractionDigits()) {
-            throw new IllegalArgumentException("provider amount exceeds supported currency precision or storage bounds");
+                || command.amount().stripTrailingZeros().scale()
+                        > command.currency().getDefaultFractionDigits()) {
+            throw new IllegalArgumentException(
+                    "provider amount exceeds supported currency precision or storage bounds");
         }
         var money = new ProviderMoney(command.amount(), command.currency());
-        var payload = new ProviderEventPayload(eventId.value(), PROVIDER, reference.value(), businessReference.value(),
-                Objects.requireNonNull(command.type()), money.amount(), money.currency().getCurrencyCode(),
-                Objects.requireNonNull(command.status()), Objects.requireNonNull(command.occurredAt()));
+        var payload = new ProviderEventPayload(
+                eventId.value(),
+                PROVIDER,
+                reference.value(),
+                businessReference.value(),
+                Objects.requireNonNull(command.type()),
+                money.amount(),
+                money.currency().getCurrencyCode(),
+                Objects.requireNonNull(command.status()),
+                Objects.requireNonNull(command.occurredAt()));
         UUID deliveryId = UUID.randomUUID();
         UUID correlationId = UUID.randomUUID();
-        var envelope = new ProviderEventEnvelope(ProviderEventMessageMapper.SCHEMA_VERSION, deliveryId,
-                ProviderEventMessageMapper.EVENT_TYPE, now(), actor.tenantId().value(), correlationId, deliveryId, payload);
+        var envelope = new ProviderEventEnvelope(
+                ProviderEventMessageMapper.SCHEMA_VERSION,
+                deliveryId,
+                ProviderEventMessageMapper.EVENT_TYPE,
+                now(),
+                actor.tenantId().value(),
+                correlationId,
+                deliveryId,
+                payload);
         String key = actor.tenantId().value() + "/" + PROVIDER + "/" + reference.value();
         try {
             kafka.send(topic, key, json.writeValueAsString(envelope)).get(6, TimeUnit.SECONDS);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new ProviderDeliveryUnavailableException();
-        } catch (ExecutionException | TimeoutException | KafkaException | org.springframework.kafka.KafkaException unavailable) {
+        } catch (ExecutionException
+                | TimeoutException
+                | KafkaException
+                | org.springframework.kafka.KafkaException unavailable) {
             throw new ProviderDeliveryUnavailableException();
         }
         return new ProviderEventReceipt(deliveryId, actor.tenantId(), eventId.value(), correlationId, now());

@@ -326,15 +326,24 @@ class AuthenticatedApiIntegrationTest {
                 {"providerEventId":"evt-auth","providerTransactionReference":"pi-auth","businessReference":"ORD-AUTH",
                 "type":"PAYMENT","amount":100.00,"currency":"USD","status":"SUCCEEDED","occurredAt":"2026-10-19T10:00:00Z"}
                 """;
-        mvc.perform(post("/api/provider-events/simulate").contentType(MediaType.APPLICATION_JSON).content(source))
+        mvc.perform(post("/api/provider-events/simulate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(source))
                 .andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/provider-events/simulate").header("Authorization", token("viewer", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content(source))
+        mvc.perform(post("/api/provider-events/simulate")
+                        .header("Authorization", token("viewer", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(source))
                 .andExpect(status().isForbidden());
-        mvc.perform(post("/api/provider-events/simulate").header("Authorization", token("analyst", TENANT))
-                        .contentType(MediaType.APPLICATION_JSON).content(source))
+        mvc.perform(post("/api/provider-events/simulate")
+                        .header("Authorization", token("analyst", TENANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(source))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.detail").value("Provider event delivery is unavailable. Retry using the same provider event identity."));
+                .andExpect(
+                        jsonPath("$.detail")
+                                .value(
+                                        "Provider event delivery is unavailable. Retry using the same provider event identity."));
     }
 
     @Test

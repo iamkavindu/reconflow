@@ -71,20 +71,34 @@ class KafkaProviderSimulationTest {
         when(kafka.send(anyString(), anyString(), anyString()))
                 .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("sensitive broker details")));
         assertThatThrownBy(() -> simulation(UserRole.ANALYST).simulate(command("100.00")))
-                .isInstanceOf(ProviderDeliveryUnavailableException.class).hasMessageNotContaining("sensitive");
+                .isInstanceOf(ProviderDeliveryUnavailableException.class)
+                .hasMessageNotContaining("sensitive");
         when(kafka.send(anyString(), anyString(), anyString()))
                 .thenThrow(new org.springframework.kafka.KafkaException("sensitive broker details"));
         assertThatThrownBy(() -> simulation(UserRole.ADMIN).simulate(command("100.00")))
-                .isInstanceOf(ProviderDeliveryUnavailableException.class).hasMessageNotContaining("sensitive");
+                .isInstanceOf(ProviderDeliveryUnavailableException.class)
+                .hasMessageNotContaining("sensitive");
     }
 
     private KafkaProviderSimulation simulation(UserRole role) {
-        return new KafkaProviderSimulation(kafka, json, () -> new Actor(TENANT, "operator", role),
-                Clock.fixed(NOW, ZoneOffset.UTC), "provider-test", true);
+        return new KafkaProviderSimulation(
+                kafka,
+                json,
+                () -> new Actor(TENANT, "operator", role),
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                "provider-test",
+                true);
     }
 
     private SimulateProviderEventCommand command(String amount) {
-        return new SimulateProviderEventCommand(" evt-demo ", " pi-demo ", " ORD-1001 ", ProviderTransactionType.PAYMENT,
-                new BigDecimal(amount), Currency.getInstance("USD"), ProviderTransactionStatus.SUCCEEDED, NOW);
+        return new SimulateProviderEventCommand(
+                " evt-demo ",
+                " pi-demo ",
+                " ORD-1001 ",
+                ProviderTransactionType.PAYMENT,
+                new BigDecimal(amount),
+                Currency.getInstance("USD"),
+                ProviderTransactionStatus.SUCCEEDED,
+                NOW);
     }
 }

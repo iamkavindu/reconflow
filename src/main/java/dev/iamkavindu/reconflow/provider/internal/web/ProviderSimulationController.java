@@ -28,15 +28,25 @@ class ProviderSimulationController {
 
     @PostMapping("/api/provider-events/simulate")
     ResponseEntity<ProviderEventReceipt> simulate(@Valid @RequestBody Request request) {
-        var receipt = simulation.simulate(new SimulateProviderEventCommand(request.providerEventId(),
-                request.providerTransactionReference(), request.businessReference(), request.type(), request.amount(),
-                request.currency(), request.status(), request.occurredAt()));
+        var receipt = simulation.simulate(new SimulateProviderEventCommand(
+                request.providerEventId(),
+                request.providerTransactionReference(),
+                request.businessReference(),
+                request.type(),
+                request.amount(),
+                request.currency(),
+                request.status(),
+                request.occurredAt()));
         return ResponseEntity.accepted().body(receipt);
     }
 
-    record Request(@NotBlank @Size(max = 200) String providerEventId,
+    record Request(
+            @NotBlank @Size(max = 200) String providerEventId,
             @NotBlank @Size(max = 200) String providerTransactionReference,
             @NotBlank @Size(max = 100) String businessReference,
-            @NotNull ProviderTransactionType type, @NotNull @Digits(integer = 15, fraction = 4) BigDecimal amount,
-            @NotNull Currency currency, @NotNull ProviderTransactionStatus status, @NotNull Instant occurredAt) {}
+            @NotNull ProviderTransactionType type,
+            @NotNull @Digits(integer = 15, fraction = 4) BigDecimal amount,
+            @NotNull Currency currency,
+            @NotNull ProviderTransactionStatus status,
+            @NotNull Instant occurredAt) {}
 }

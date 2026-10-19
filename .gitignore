@@ -33,3 +33,7 @@ build/
 
 ### VS Code ###
 .vscode/
+node_modules/
+test-results/
+playwright-report/
+dev/browser/screenshots/

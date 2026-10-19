@@ -3,6 +3,7 @@ package dev.iamkavindu.reconflow.tenancy.internal.context;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,12 +40,22 @@ class ApiSecurityConfiguration {
     }
 
     @Bean
-    SecurityFilterChain apiSecurity(HttpSecurity http, TenantMemberships memberships) throws Exception {
+    SecurityFilterChain apiSecurity(
+            HttpSecurity http, TenantMemberships memberships, @Value("${reconflow.security.issuer}") URI issuer)
+            throws Exception {
         // This chain accepts bearer headers only; it never authenticates cookies, Basic, or sessions.
         http.csrf(csrf -> csrf.disable());
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.requestCache(cache -> cache.disable());
-        http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated());
+        http.authorizeHttpRequests(requests -> requests.requestMatchers(
+                        "/", "/index.html", "/app.js", "/auth.js", "/app.css", "/ui/config")
+                .permitAll()
+                .anyRequest()
+                .authenticated());
+        http.headers(headers -> headers.contentSecurityPolicy(csp ->
+                csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' "
+                        + issuer.resolve("/")
+                        + "; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")));
         http.exceptionHandling(
                 errors -> errors.authenticationEntryPoint((request, response, error) -> unauthorized(response))
                         .accessDeniedHandler((request, response, error) -> problem(response, 403, "Forbidden")));

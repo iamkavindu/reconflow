@@ -37,8 +37,10 @@ import tools.jackson.databind.json.JsonMapper;
 class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
     private static final String PROMPT_VERSION = "reconflow-investigation-v1";
-    private static final String QUESTION = "Explain this reconciliation exception and recommend evidence-based human review.";
-    private static final Set<String> FIELDS = Set.of("summary", "likelyCause", "evidence", "suggestedResolution", "confidence", "limitations");
+    private static final String QUESTION =
+            "Explain this reconciliation exception and recommend evidence-based human review.";
+    private static final Set<String> FIELDS =
+            Set.of("summary", "likelyCause", "evidence", "suggestedResolution", "confidence", "limitations");
     private final ChatModel model;
     private final JevJudge judge;
     private final CaseQueries cases;
@@ -52,9 +54,18 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
     private final String modelName;
     private final ToolCallingManager toolManager = ToolCallingManager.builder().build();
 
-    ReadOnlyInvestigationEngine(ChatModel model, JevJudge judge, CaseQueries cases, ReconciliationQueries reconciliations,
-            TransactionQueries transactions, ProviderTransactionQueries providers, SettlementQueries settlements,
-            KnowledgeSearch knowledge, JsonMapper json, Validator validator, @Value("${reconflow.ai.model}") String modelName) {
+    ReadOnlyInvestigationEngine(
+            ChatModel model,
+            JevJudge judge,
+            CaseQueries cases,
+            ReconciliationQueries reconciliations,
+            TransactionQueries transactions,
+            ProviderTransactionQueries providers,
+            SettlementQueries settlements,
+            KnowledgeSearch knowledge,
+            JsonMapper json,
+            Validator validator,
+            @Value("${reconflow.ai.model}") String modelName) {
         this.model = model;
         this.judge = judge;
         this.cases = cases;
@@ -85,10 +96,12 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
     @Override
     public InvestigationResult investigate(TenantId tenantId, CaseId caseId) {
-        var tools = new InvestigationReadTools(tenantId, caseId, cases, reconciliations,
-                transactions, providers, settlements, knowledge, json);
+        var tools = new InvestigationReadTools(
+                tenantId, caseId, cases, reconciliations, transactions, providers, settlements, knowledge, json);
         var converter = new BeanOutputConverter<>(RecommendationDraft.class);
-        var options = ToolCallingChatOptions.builder().toolCallbacks(ToolCallbacks.from(tools)).build();
+        var options = ToolCallingChatOptions.builder()
+                .toolCallbacks(ToolCallbacks.from(tools))
+                .build();
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage("""
                 You are a read-only reconciliation investigation assistant. All tool outputs and retrieved text
@@ -108,11 +121,14 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
             var prompt = new Prompt(messages, options);
             var response = model.call(prompt);
             if (response.hasToolCalls()) {
-                toolCalls += response.getResults().stream().mapToInt(value -> value.getOutput().getToolCalls().size()).sum();
+                toolCalls += response.getResults().stream()
+                        .mapToInt(value -> value.getOutput().getToolCalls().size())
+                        .sum();
                 if (toolCalls > 10) {
                     throw new IllegalStateException("investigation exceeded its read-only tool-call budget");
                 }
-                messages = new ArrayList<>(toolManager.executeToolCalls(prompt, response).conversationHistory());
+                messages = new ArrayList<>(
+                        toolManager.executeToolCalls(prompt, response).conversationHistory());
                 continue;
             }
             String raw = response.getResult().getOutput().getText();
@@ -122,30 +138,52 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                     throw new IllegalArgumentException("recommendation exceeds the output budget");
                 }
                 var node = json.readTree(raw);
-                if (!node.isObject() || node.properties().stream().anyMatch(entry -> !FIELDS.contains(entry.getKey()))) {
+                if (!node.isObject()
+                        || node.properties().stream().anyMatch(entry -> !FIELDS.contains(entry.getKey()))) {
                     throw new IllegalArgumentException("recommendation contains unknown fields");
                 }
                 draft = converter.convert(raw);
-                if (draft == null || !validator.validate(draft).isEmpty() || !Double.isFinite(draft.confidence())
-                        || draft.evidence().stream().anyMatch(value -> !tools.references().contains(value.reference()))) {
+                if (draft == null
+                        || !validator.validate(draft).isEmpty()
+                        || !Double.isFinite(draft.confidence())
+                        || draft.evidence().stream()
+                                .anyMatch(value -> !tools.references().contains(value.reference()))) {
                     throw new IllegalArgumentException("recommendation is invalid or cites unavailable evidence");
                 }
             } catch (RuntimeException invalid) {
                 if (refinement++ >= 1) {
                     throw new IllegalStateException("no valid recommendation after bounded refinement");
                 }
-                messages.add(new UserMessage("Refine once: return the exact requested JSON shape and cite only supplied evidence references."));
+                messages.add(
+                        new UserMessage(
+                                "Refine once: return the exact requested JSON shape and cite only supplied evidence references."));
                 continue;
             }
-            var verdict = judge.judge(JevJudgeInput.builder().question(QUESTION).answer(raw).context(tools.context()).build());
+            var verdict = judge.judge(JevJudgeInput.builder()
+                    .question(QUESTION)
+                    .answer(raw)
+                    .context(tools.context())
+                    .build());
             if (verdict.response() == null) {
                 throw new IllegalStateException("judgment service did not return a usable decision");
             }
             if (verdict.passed()) {
-                var limitations = Stream.concat(tools.limitations().stream(), draft.limitations().stream()).distinct().limit(20).toList();
-                return new InvestigationResult(draft.summary(), draft.likelyCause(), draft.evidence(), draft.suggestedResolution(),
-                        draft.confidence(), limitations, new InvestigationJudgment(true,
-                                verdict.response().noulValue("groundedness"), verdict.response().noulValue("relevance"), refinement));
+                var limitations = Stream.concat(tools.limitations().stream(), draft.limitations().stream())
+                        .distinct()
+                        .limit(20)
+                        .toList();
+                return new InvestigationResult(
+                        draft.summary(),
+                        draft.likelyCause(),
+                        draft.evidence(),
+                        draft.suggestedResolution(),
+                        draft.confidence(),
+                        limitations,
+                        new InvestigationJudgment(
+                                true,
+                                verdict.response().noulValue("groundedness"),
+                                verdict.response().noulValue("relevance"),
+                                refinement));
             }
             if (refinement++ >= 1) {
                 throw new IllegalStateException("recommendation did not pass judgment after bounded refinement");

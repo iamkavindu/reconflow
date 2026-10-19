@@ -26,8 +26,11 @@ class InvestigationWorkflowController {
     private final InvestigationEngine engine;
     private final CurrentActor currentActor;
 
-    InvestigationWorkflowController(InvestigationCommands commands, InvestigationQueries queries,
-            InvestigationEngine engine, CurrentActor currentActor) {
+    InvestigationWorkflowController(
+            InvestigationCommands commands,
+            InvestigationQueries queries,
+            InvestigationEngine engine,
+            CurrentActor currentActor) {
         this.commands = commands;
         this.queries = queries;
         this.engine = engine;
@@ -42,7 +45,9 @@ class InvestigationWorkflowController {
         }
         var result = commands.request(new CaseId(id));
         return ResponseEntity.accepted()
-                .location(URI.create("/api/investigations/" + result.investigationId().value())).body(result);
+                .location(URI.create(
+                        "/api/investigations/" + result.investigationId().value()))
+                .body(result);
     }
 
     @GetMapping("/api/investigations/{id}")

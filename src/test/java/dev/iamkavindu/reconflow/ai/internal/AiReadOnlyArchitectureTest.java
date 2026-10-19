@@ -10,11 +10,22 @@ class AiReadOnlyArchitectureTest {
 
     @Test
     void aiExecutionCannotDependOnFinancialOrCaseWritePorts() {
-        var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
+        var classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
                 .importPackages("dev.iamkavindu.reconflow");
-        noClasses().that().resideInAPackage("..ai..")
-                .should().dependOnClassesThat().haveSimpleNameEndingWith("Commands").check(classes);
-        noClasses().that().resideInAPackage("..ai..")
-                .should().dependOnClassesThat().haveSimpleName("InvestigationProcessing").check(classes);
+        noClasses()
+                .that()
+                .resideInAPackage("..ai..")
+                .should()
+                .dependOnClassesThat()
+                .haveSimpleNameEndingWith("Commands")
+                .check(classes);
+        noClasses()
+                .that()
+                .resideInAPackage("..ai..")
+                .should()
+                .dependOnClassesThat()
+                .haveSimpleName("InvestigationProcessing")
+                .check(classes);
     }
 }

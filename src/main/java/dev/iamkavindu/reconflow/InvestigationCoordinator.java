@@ -36,11 +36,17 @@ class InvestigationCoordinator {
         }
         try {
             var result = engine.investigate(event.tenantId(), event.caseId());
-            processing.complete(event.tenantId(), event.investigationId(), result, engine.model(), engine.promptVersion());
+            processing.complete(
+                    event.tenantId(), event.investigationId(), result, engine.model(), engine.promptVersion());
         } catch (RuntimeException error) {
-            LOG.warn("Investigation {} failed for tenant {} ({})", event.investigationId().value(), event.tenantId().value(),
+            LOG.warn(
+                    "Investigation {} failed for tenant {} ({})",
+                    event.investigationId().value(),
+                    event.tenantId().value(),
                     error.getClass().getSimpleName());
-            processing.fail(event.tenantId(), event.investigationId(),
+            processing.fail(
+                    event.tenantId(),
+                    event.investigationId(),
                     "AI investigation could not produce a supported recommendation. Human review is required.");
         }
     }

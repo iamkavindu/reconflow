@@ -54,11 +54,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Import({TestcontainersConfiguration.class, AiInvestigationIntegrationTest.ActorConfiguration.class})
-@SpringBootTest(properties = {
-    "reconflow.kafka.enabled=false", "reconflow.security.enabled=false", "reconflow.ai.enabled=true",
-    "reconflow.ai.model=contract-test", "reconflow.ai.api-key=fake-model-key",
-    "reconflow.ai.typesafe-api-key=fake-judge-key", "reconflow.reconciliation.scheduling-enabled=false"
-})
+@SpringBootTest(
+        properties = {
+            "reconflow.kafka.enabled=false",
+            "reconflow.security.enabled=false",
+            "reconflow.ai.enabled=true",
+            "reconflow.ai.model=contract-test",
+            "reconflow.ai.api-key=fake-model-key",
+            "reconflow.ai.typesafe-api-key=fake-judge-key",
+            "reconflow.reconciliation.scheduling-enabled=false"
+        })
 class AiInvestigationIntegrationTest {
 
     private static final TenantId TENANT = new TenantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
@@ -119,7 +124,8 @@ class AiInvestigationIntegrationTest {
         assertThat(MODELS.judgeCalls).hasValue(2);
         assertThat(MODELS.toolOutputs).anyMatch(value -> value.contains(MODELS.reference));
         assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
-        assertThat(reconciliations.getReconciliationById(TENANT, original.reconciliationId())).isEqualTo(determination);
+        assertThat(reconciliations.getReconciliationById(TENANT, original.reconciliationId()))
+                .isEqualTo(determination);
     }
 
     @Test
@@ -168,8 +174,10 @@ class AiInvestigationIntegrationTest {
 
     private InvestigationView execute(CaseView investigationCase) {
         var requested = commands.request(investigationCase.caseId());
-        await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
-                assertThat(investigations.get(TENANT, requested.investigationId()).status())
+        await().atMost(Duration.ofSeconds(20))
+                .untilAsserted(() -> assertThat(investigations
+                                .get(TENANT, requested.investigationId())
+                                .status())
                         .isIn(InvestigationStatus.COMPLETED, InvestigationStatus.FAILED));
         return investigations.get(TENANT, requested.investigationId());
     }
@@ -177,16 +185,34 @@ class AiInvestigationIntegrationTest {
     private CaseView exception() {
         String reference = "AI-" + UUID.randomUUID();
         Instant now = Instant.now();
-        var line = new SettlementLine("pi-" + reference, new BigDecimal("100.00"),
-                new BigDecimal("3.20"), new BigDecimal("96.80"));
-        var settlement = settlements.importSettlement(new ImportSettlementCommand(TENANT, "stripe", "set-" + reference,
-                Currency.getInstance("USD"), line.grossAmount(), line.feeAmount(), line.netAmount(), now, List.of(line)));
+        var line = new SettlementLine(
+                "pi-" + reference, new BigDecimal("100.00"), new BigDecimal("3.20"), new BigDecimal("96.80"));
+        var settlement = settlements.importSettlement(new ImportSettlementCommand(
+                TENANT,
+                "stripe",
+                "set-" + reference,
+                Currency.getInstance("USD"),
+                line.grossAmount(),
+                line.feeAmount(),
+                line.netAmount(),
+                now,
+                List.of(line)));
         MODELS.reference = "settlement:" + settlement.settlementId().value();
-        var transaction = transactions.recordTransaction(new RecordTransactionCommand(reference, TransactionType.PAYMENT,
-                new BigDecimal("100.00"), Currency.getInstance("USD"), now));
-        provider.ingestProviderEvent(new IngestProviderEventCommand(TENANT, "evt-" + reference, "stripe", "pi-" + reference,
-                reference, ProviderTransactionType.PAYMENT, new BigDecimal("96.80"), Currency.getInstance("USD"),
-                ProviderTransactionStatus.SUCCEEDED, now, UUID.randomUUID(), UUID.randomUUID()));
+        var transaction = transactions.recordTransaction(new RecordTransactionCommand(
+                reference, TransactionType.PAYMENT, new BigDecimal("100.00"), Currency.getInstance("USD"), now));
+        provider.ingestProviderEvent(new IngestProviderEventCommand(
+                TENANT,
+                "evt-" + reference,
+                "stripe",
+                "pi-" + reference,
+                reference,
+                ProviderTransactionType.PAYMENT,
+                new BigDecimal("96.80"),
+                Currency.getInstance("USD"),
+                ProviderTransactionStatus.SUCCEEDED,
+                now,
+                UUID.randomUUID(),
+                UUID.randomUUID()));
         List<CaseView> found = new ArrayList<>();
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             var reconciliation = reconciliations.getReconciliation(TENANT, transaction.transactionId());
@@ -195,7 +221,14 @@ class AiInvestigationIntegrationTest {
         return found.getLast();
     }
 
-    enum Mode { SUCCESS, REFINE, FABRICATED, ILLEGAL_WRITE, REJECT, OUTAGE }
+    enum Mode {
+        SUCCESS,
+        REFINE,
+        FABRICATED,
+        ILLEGAL_WRITE,
+        REJECT,
+        OUTAGE
+    }
 
     static class FakeModels {
 
@@ -237,11 +270,19 @@ class AiInvestigationIntegrationTest {
                 } else {
                     String citation = mode == Mode.FABRICATED ? "settlement:another-tenants-record" : reference;
                     String draft = json.writeValueAsString(Map.of(
-                            "summary", "The reported fee explains the gross/net difference and needs human review.",
-                            "likelyCause", "Provider-reported fee", "evidence", List.of(Map.of("reference", citation,
-                                    "explanation", "Reported gross 100, fee 3.20, net 96.80")),
-                            "suggestedResolution", "ACCEPTED_FEE_VARIANCE", "confidence", 0.8,
-                            "limitations", List.of("The contractual fee policy is unavailable.")));
+                            "summary",
+                            "The reported fee explains the gross/net difference and needs human review.",
+                            "likelyCause",
+                            "Provider-reported fee",
+                            "evidence",
+                            List.of(Map.of(
+                                    "reference", citation, "explanation", "Reported gross 100, fee 3.20, net 96.80")),
+                            "suggestedResolution",
+                            "ACCEPTED_FEE_VARIANCE",
+                            "confidence",
+                            0.8,
+                            "limitations",
+                            List.of("The contractual fee policy is unavailable.")));
                     respond(exchange, 200, chat(draft, null));
                 }
             } else {
@@ -251,10 +292,19 @@ class AiInvestigationIntegrationTest {
                     return;
                 }
                 double groundedness = mode == Mode.REJECT || (mode == Mode.REFINE && call == 1) ? 0.1 : 0.95;
-                respond(exchange, 200, json.writeValueAsString(Map.of("model", "jev-contract-test", "answers", Map.of(
-                        "groundedness", Map.of("type", "noul", "noul", groundedness),
-                        "relevance", Map.of("type", "noul", "noul", 0.95),
-                        "advisory_only", Map.of("type", "noul", "noul", 0.99)), "usage", Map.of())));
+                respond(
+                        exchange,
+                        200,
+                        json.writeValueAsString(Map.of(
+                                "model",
+                                "jev-contract-test",
+                                "answers",
+                                Map.of(
+                                        "groundedness", Map.of("type", "noul", "noul", groundedness),
+                                        "relevance", Map.of("type", "noul", "noul", 0.95),
+                                        "advisory_only", Map.of("type", "noul", "noul", 0.99)),
+                                "usage",
+                                Map.of())));
             }
         }
 
@@ -263,14 +313,30 @@ class AiInvestigationIntegrationTest {
             message.put("role", "assistant");
             message.put("content", content);
             if (tool != null) {
-                message.put("tool_calls", List.of(Map.of("id", "call-contract", "type", "function",
-                        "function", Map.of("name", tool, "arguments", "{}"))));
+                message.put(
+                        "tool_calls",
+                        List.of(Map.of(
+                                "id",
+                                "call-contract",
+                                "type",
+                                "function",
+                                "function",
+                                Map.of("name", tool, "arguments", "{}"))));
             }
-            return json.writeValueAsString(Map.of("id", "chatcmpl-contract", "object", "chat.completion",
-                    "created", Instant.now().getEpochSecond(), "model", "contract-test",
-                    "choices", List.of(Map.of("index", 0, "message", message,
-                            "finish_reason", tool == null ? "stop" : "tool_calls")),
-                    "usage", Map.of("prompt_tokens", 10, "completion_tokens", 10, "total_tokens", 20)));
+            return json.writeValueAsString(Map.of(
+                    "id",
+                    "chatcmpl-contract",
+                    "object",
+                    "chat.completion",
+                    "created",
+                    Instant.now().getEpochSecond(),
+                    "model",
+                    "contract-test",
+                    "choices",
+                    List.of(Map.of(
+                            "index", 0, "message", message, "finish_reason", tool == null ? "stop" : "tool_calls")),
+                    "usage",
+                    Map.of("prompt_tokens", 10, "completion_tokens", 10, "total_tokens", 20)));
         }
 
         void respond(HttpExchange exchange, int status, String body) throws IOException {

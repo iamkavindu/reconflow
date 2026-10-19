@@ -46,9 +46,16 @@ class InvestigationReadTools {
     private boolean hasPolicyEvidence;
     private List<ProviderTransactionView> providerSnapshot;
 
-    InvestigationReadTools(TenantId tenantId, CaseId caseId, CaseQueries cases, ReconciliationQueries reconciliations,
-            TransactionQueries transactions, ProviderTransactionQueries providers,
-            SettlementQueries settlementEvidence, KnowledgeSearch knowledge, JsonMapper json) {
+    InvestigationReadTools(
+            TenantId tenantId,
+            CaseId caseId,
+            CaseQueries cases,
+            ReconciliationQueries reconciliations,
+            TransactionQueries transactions,
+            ProviderTransactionQueries providers,
+            SettlementQueries settlementEvidence,
+            KnowledgeSearch knowledge,
+            JsonMapper json) {
         this.tenantId = tenantId;
         this.transactions = transactions;
         this.providers = providers;
@@ -66,8 +73,15 @@ class InvestigationReadTools {
             limitations.add("Only the first ten provider source records were included in this bounded investigation.");
         }
         references.add("case:" + caseId.value());
-        cache.put("case", json.writeValueAsString(Map.of("reference", "case:" + caseId.value(),
-                "status", investigationCase.status(), "reconciliationId", investigationCase.reconciliationId())));
+        cache.put(
+                "case",
+                json.writeValueAsString(Map.of(
+                        "reference",
+                        "case:" + caseId.value(),
+                        "status",
+                        investigationCase.status(),
+                        "reconciliationId",
+                        investigationCase.reconciliationId())));
         getReconciliation();
         getTransaction();
         getProviderTransaction();
@@ -78,16 +92,27 @@ class InvestigationReadTools {
     @Tool(description = "Read the immutable reconciliation determination for this investigation's bound case")
     String getReconciliation() {
         return cached("reconciliation", () -> {
-            String reference = "reconciliation:" + reconciliation.reconciliationId().value();
+            String reference =
+                    "reconciliation:" + reconciliation.reconciliationId().value();
             references.add(reference);
-            return new Evidence(reference, new ReconciliationContext(reconciliation.reconciliationId().value(),
-                    reconciliation.status().name(), reconciliation.businessReference(), reconciliation.startedAt(),
-                    reconciliation.expiresAt(), reconciliation.decidedAt(), reconciliation.ruleEvaluations(),
-                    reconciliation.discrepancies(), providerIds));
+            return new Evidence(
+                    reference,
+                    new ReconciliationContext(
+                            reconciliation.reconciliationId().value(),
+                            reconciliation.status().name(),
+                            reconciliation.businessReference(),
+                            reconciliation.startedAt(),
+                            reconciliation.expiresAt(),
+                            reconciliation.decidedAt(),
+                            reconciliation.ruleEvaluations(),
+                            reconciliation.discrepancies(),
+                            providerIds));
         });
     }
 
-    @Tool(description = "Read the internal transaction already associated with the bound case; no arbitrary IDs are accepted")
+    @Tool(
+            description =
+                    "Read the internal transaction already associated with the bound case; no arbitrary IDs are accepted")
     String getTransaction() {
         return cached("transaction", () -> {
             if (reconciliation.transactionId() == null) {
@@ -103,45 +128,75 @@ class InvestigationReadTools {
 
     @Tool(description = "Read up to ten normalized provider transaction records already linked to the bound case")
     String getProviderTransaction() {
-        return cached("provider", () -> providerRecords().stream().map(record -> {
-            String reference = "provider-transaction:" + record.providerTransactionId().value();
-            references.add(reference);
-            return new Evidence(reference, record);
-        }).toList());
+        return cached(
+                "provider",
+                () -> providerRecords().stream()
+                        .map(record -> {
+                            String reference = "provider-transaction:"
+                                    + record.providerTransactionId().value();
+                            references.add(reference);
+                            return new Evidence(reference, record);
+                        })
+                        .toList());
     }
 
-    @Tool(description = "Read reported settlement totals and case-relevant lines; these do not establish contractual fee correctness")
+    @Tool(
+            description =
+                    "Read reported settlement totals and case-relevant lines; these do not establish contractual fee correctness")
     String getSettlement() {
         return cached("settlement", () -> {
             var records = providerRecords();
             var settlements = providerIds.stream()
-                    .flatMap(id -> settlementEvidence.forProviderTransaction(tenantId, id).stream()).distinct().toList();
+                    .flatMap(id -> settlementEvidence.forProviderTransaction(tenantId, id).stream())
+                    .distinct()
+                    .toList();
             if (settlements.size() > 10) {
                 limitations.add("Only the first ten linked settlements were included.");
             }
-            return settlements.stream().limit(10).map(settlement -> {
-                String reference = "settlement:" + settlement.settlementId().value();
-                references.add(reference);
-                var sourceRefs = records.stream().filter(record -> record.provider().equals(settlement.provider()))
-                        .map(ProviderTransactionView::providerTransactionReference).toList();
-                var lines = settlement.lines().stream()
-                        .filter(line -> sourceRefs.contains(line.providerTransactionReference())).limit(10).toList();
-                return new Evidence(reference, new SettlementContext(settlement.provider(), settlement.currency(),
-                        settlement.grossAmount(), settlement.feeAmount(), settlement.netAmount(), lines));
-            }).toList();
+            return settlements.stream()
+                    .limit(10)
+                    .map(settlement -> {
+                        String reference =
+                                "settlement:" + settlement.settlementId().value();
+                        references.add(reference);
+                        var sourceRefs = records.stream()
+                                .filter(record -> record.provider().equals(settlement.provider()))
+                                .map(ProviderTransactionView::providerTransactionReference)
+                                .toList();
+                        var lines = settlement.lines().stream()
+                                .filter(line -> sourceRefs.contains(line.providerTransactionReference()))
+                                .limit(10)
+                                .toList();
+                        return new Evidence(
+                                reference,
+                                new SettlementContext(
+                                        settlement.provider(),
+                                        settlement.currency(),
+                                        settlement.grossAmount(),
+                                        settlement.feeAmount(),
+                                        settlement.netAmount(),
+                                        lines));
+                    })
+                    .toList();
         });
     }
 
     @Tool(description = "Read deterministic discrepancies; findings cannot be changed or resolved by these tools")
     String getDiscrepancies() {
-        return cached("discrepancies", () -> reconciliation.discrepancies().stream().map(discrepancy -> {
-            String reference = "discrepancy:" + discrepancy.discrepancyId();
-            references.add(reference);
-            return new Evidence(reference, discrepancy);
-        }).toList());
+        return cached(
+                "discrepancies",
+                () -> reconciliation.discrepancies().stream()
+                        .map(discrepancy -> {
+                            String reference = "discrepancy:" + discrepancy.discrepancyId();
+                            references.add(reference);
+                            return new Evidence(reference, discrepancy);
+                        })
+                        .toList());
     }
 
-    @Tool(description = "Search screened policy evidence within the bound tenant; query text cannot change tenant scope")
+    @Tool(
+            description =
+                    "Search screened policy evidence within the bound tenant; query text cannot change tenant scope")
     String searchPolicies(String query) {
         return search(KnowledgeKind.POLICY, query);
     }
@@ -151,7 +206,9 @@ class InvestigationReadTools {
         return search(KnowledgeKind.PROVIDER_DOCUMENTATION, query);
     }
 
-    @Tool(description = "Search screened past-case documentation within the bound tenant; examples are supporting context only")
+    @Tool(
+            description =
+                    "Search screened past-case documentation within the bound tenant; examples are supporting context only")
     String searchSimilarCases(String query) {
         return search(KnowledgeKind.PAST_CASE, query);
     }
@@ -167,7 +224,8 @@ class InvestigationReadTools {
     synchronized List<String> limitations() {
         var result = new ArrayList<>(limitations);
         if (!hasPolicyEvidence) {
-            result.add("No screened policy or provider documentation was available to verify contractual fee correctness.");
+            result.add(
+                    "No screened policy or provider documentation was available to verify contractual fee correctness.");
         }
         return List.copyOf(result);
     }
@@ -186,7 +244,9 @@ class InvestigationReadTools {
 
     private List<ProviderTransactionView> providerRecords() {
         if (providerSnapshot == null) {
-            providerSnapshot = providerIds.stream().map(id -> providers.getProviderTransaction(tenantId, id)).toList();
+            providerSnapshot = providerIds.stream()
+                    .map(id -> providers.getProviderTransaction(tenantId, id))
+                    .toList();
         }
         return providerSnapshot;
     }
@@ -206,10 +266,22 @@ class InvestigationReadTools {
 
     private record Evidence(String reference, Object data) {}
 
-    private record ReconciliationContext(UUID id, String status, String businessReference, Instant startedAt,
-            Instant expiresAt, Instant decidedAt, List<RuleEvaluation> rules, List<Discrepancy> discrepancies,
+    private record ReconciliationContext(
+            UUID id,
+            String status,
+            String businessReference,
+            Instant startedAt,
+            Instant expiresAt,
+            Instant decidedAt,
+            List<RuleEvaluation> rules,
+            List<Discrepancy> discrepancies,
             List<ProviderTransactionId> providerTransactionIds) {}
 
-    private record SettlementContext(String provider, String currency, BigDecimal grossAmount, BigDecimal feeAmount,
-            BigDecimal netAmount, List<SettlementLine> relevantLines) {}
+    private record SettlementContext(
+            String provider,
+            String currency,
+            BigDecimal grossAmount,
+            BigDecimal feeAmount,
+            BigDecimal netAmount,
+            List<SettlementLine> relevantLines) {}
 }

@@ -7,7 +7,7 @@ const sessionAction = document.querySelector('#session-action');
 let actor;
 let generation = 0;
 const uid = value => value?.value ?? value;
-const writable = () => actor && actor.role !== 'VIEWER';
+const writable = () => actor && ['ADMIN', 'ANALYST'].includes(actor.role);
 const human = value => String(value ?? '—').replaceAll('_', ' ');
 const time = value => value ? new Date(value).toLocaleString() : '—';
 function el(tag, text, className) {
@@ -160,7 +160,7 @@ async function search(view, version) {
   for (const name of definition.filters) input(form, name, labels[name]);
   if (definition.status.length) input(form, 'status', 'Status (blank = all)', {values: definition.status});
   input(form, 'from', 'From', {type: 'datetime-local'});
-  input(form, 'to', 'To', {type: 'datetime-local'});
+  input(form, 'to', 'To (exclusive)', {type: 'datetime-local'});
   const result = el('div');
   const pager = el('div', undefined, 'actions');
   let offset = 0;
@@ -173,6 +173,7 @@ async function search(view, version) {
   async function load(start) {
     if (loading) return;
     loading = true; previous.disabled = next.disabled = submit.disabled = true;
+    result.replaceChildren(el('p', 'Searching…', 'muted'));
     try {
       const rows = await api('/api/' + view + '?' + new URLSearchParams({...filters, limit: 25, offset: start}));
       if (version !== generation) return;

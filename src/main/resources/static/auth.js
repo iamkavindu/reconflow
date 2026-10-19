@@ -37,7 +37,7 @@ export async function finishSignIn() {
   const pending = stored ? JSON.parse(stored) : null;
   if (!pending || pending.state !== query.get('state') || pending.redirect !== location.origin + '/' ||
       Date.now() - pending.created > 300000 || pending.created > Date.now() || query.getAll('code').length !== 1 ||
-      query.getAll('state').length !== 1 || query.get('iss') !== settings.issuer || query.has('error')) {
+      query.getAll('state').length !== 1 || query.getAll('iss').length !== 1 || query.get('iss') !== settings.issuer || query.has('error')) {
     throw new Error('Sign-in could not be verified. Start a new sign-in.');
   }
   const response = await fetch(settings.issuer + '/protocol/openid-connect/token', {method: 'POST', credentials: 'omit',

@@ -2,6 +2,7 @@
 """Generate and verify the agreed ReconFlow MVP scenarios through authenticated APIs."""
 
 import argparse
+import http.client
 import json
 import os
 import re
@@ -44,7 +45,7 @@ class Login:
             except urllib.error.HTTPError as error:
                 if not wait or error.code not in (404, 502, 503) or time.monotonic() >= deadline:
                     raise DemoError(f"Demo sign-in failed (HTTP {error.code}); check the realm, user and credentials.") from None
-            except (urllib.error.URLError, TimeoutError):
+            except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException):
                 if not wait or time.monotonic() >= deadline:
                     raise DemoError("The demo identity provider did not become available.") from None
             time.sleep(1)
@@ -78,7 +79,7 @@ class Api:
                     continue
                 if not (retry_delivery and error.code == 503 and attempt < 2):
                     raise ApiError(error.code, path) from None
-            except (urllib.error.URLError, TimeoutError):
+            except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException):
                 if not retry_delivery or attempt >= 2:
                     raise ApiError(0, path) from None
             time.sleep(0.5)

@@ -9,7 +9,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @ConditionalOnProperty(name = "reconflow.ai.enabled", havingValue = "true")
 class InvestigationExecutorConfiguration {
 
-    @Bean
+    @Bean(defaultCandidate = false)
     ThreadPoolTaskExecutor investigationExecutor() {
         var executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);

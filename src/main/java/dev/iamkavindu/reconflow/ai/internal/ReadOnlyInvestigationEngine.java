@@ -99,7 +99,10 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         var tools = new InvestigationReadTools(
                 tenantId, caseId, cases, reconciliations, transactions, providers, settlements, knowledge, json);
         var converter = new BeanOutputConverter<>(RecommendationDraft.class);
-        var options = ToolCallingChatOptions.builder()
+        if (!(model.getOptions() instanceof ToolCallingChatOptions configured)) {
+            throw new IllegalStateException("the investigation model must support read-only tool calling");
+        }
+        var options = configured.mutate()
                 .toolCallbacks(ToolCallbacks.from(tools))
                 .build();
         List<Message> messages = new ArrayList<>();
@@ -139,6 +142,7 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 }
                 var node = json.readTree(raw);
                 if (!node.isObject()
+                        || node.size() != FIELDS.size()
                         || node.properties().stream().anyMatch(entry -> !FIELDS.contains(entry.getKey()))) {
                     throw new IllegalArgumentException("recommendation contains unknown fields");
                 }

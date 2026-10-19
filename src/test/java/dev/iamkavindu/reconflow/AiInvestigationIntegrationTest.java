@@ -5,6 +5,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import dev.iamkavindu.reconflow.ai.InvestigationEngine;
 import dev.iamkavindu.reconflow.cases.CaseQueries;
 import dev.iamkavindu.reconflow.cases.CaseView;
 import dev.iamkavindu.reconflow.cases.InvestigationCommands;
@@ -45,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -101,12 +103,32 @@ class AiInvestigationIntegrationTest {
     @Autowired
     CaseQueries cases;
 
+    @Autowired
+    ApplicationContext context;
+
+    @Autowired
+    InvestigationEngine engine;
+
     @BeforeEach
     void resetModels() {
         MODELS.mode = Mode.SUCCESS;
         MODELS.chatCalls.set(0);
         MODELS.judgeCalls.set(0);
         MODELS.toolOutputs.clear();
+    }
+
+    @Test
+    void returnsAValidatedRecommendationFromTheConfiguredHttpAdapters() {
+        var original = exception();
+        var result = engine.investigate(TENANT, original.caseId());
+        assertThat(result.judgment().accepted()).isTrue();
+        assertThat(result.evidence().getFirst().reference()).isEqualTo(MODELS.reference);
+    }
+
+    @Test
+    void keepsFinancialEventExecutionSeparateFromModelCalls() {
+        assertThat(context.getBean("applicationTaskExecutor"))
+                .isNotSameAs(context.getBean("investigationExecutor"));
     }
 
     @Test

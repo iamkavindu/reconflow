@@ -37,8 +37,12 @@ class KnowledgeDocumentService implements KnowledgeDocuments {
     private final Clock clock;
     private final ApplicationEventPublisher events;
 
-    KnowledgeDocumentService(JdbcClient jdbc, ObjectProvider<PgVectorStore> vectors, CurrentActor currentActor,
-            Clock clock, ApplicationEventPublisher events) {
+    KnowledgeDocumentService(
+            JdbcClient jdbc,
+            ObjectProvider<PgVectorStore> vectors,
+            CurrentActor currentActor,
+            Clock clock,
+            ApplicationEventPublisher events) {
         this.jdbc = jdbc;
         this.vectors = vectors;
         this.currentActor = currentActor;
@@ -67,43 +71,75 @@ class KnowledgeDocumentService implements KnowledgeDocuments {
                         INSERT INTO ai.knowledge_documents
                             (id, tenant_id, kind, title, content, digest, imported_by, imported_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (tenant_id, digest) DO NOTHING
-                        """).params(id, actor.tenantId().value(), command.kind().name(), command.title(), command.content(),
-                                digest, actor.subject(), now).update();
+                        """)
+                .params(
+                        id,
+                        actor.tenantId().value(),
+                        command.kind().name(),
+                        command.title(),
+                        command.content(),
+                        digest,
+                        actor.subject(),
+                        now)
+                .update();
         if (inserted == 0) {
             UUID original = jdbc.sql("SELECT id FROM ai.knowledge_documents WHERE tenant_id = ? AND digest = ?")
-                    .params(actor.tenantId().value(), digest).query(UUID.class).single();
+                    .params(actor.tenantId().value(), digest)
+                    .query(UUID.class)
+                    .single();
             return get(actor.tenantId(), original);
         }
         List<Document> chunks = new ArrayList<>();
         String text = command.content();
-        for (int start = 0; start < text.length();) {
+        for (int start = 0; start < text.length(); ) {
             int end = Math.min(start + 2000, text.length());
             if (end < text.length() && Character.isHighSurrogate(text.charAt(end - 1))) {
                 end--;
             }
             String part = text.substring(start, end);
-            chunks.add(Document.builder().id(UUID.randomUUID().toString()).text(part)
-                    .metadata(Map.of("tenantId", actor.tenantId().value().toString(), "documentId", id.toString(),
-                            "kind", command.kind().name(), "title", command.title(), "chunkIndex", chunks.size())).build());
+            chunks.add(Document.builder()
+                    .id(UUID.randomUUID().toString())
+                    .text(part)
+                    .metadata(Map.of(
+                            "tenantId",
+                            actor.tenantId().value().toString(),
+                            "documentId",
+                            id.toString(),
+                            "kind",
+                            command.kind().name(),
+                            "title",
+                            command.title(),
+                            "chunkIndex",
+                            chunks.size()))
+                    .build());
             start = end;
         }
         store.add(chunks);
-        events.publishEvent(new KnowledgeDocumentImported(UUID.randomUUID(), actor.tenantId(), id, actor.subject(), now));
+        events.publishEvent(
+                new KnowledgeDocumentImported(UUID.randomUUID(), actor.tenantId(), id, actor.subject(), now));
         return get(actor.tenantId(), id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public KnowledgeDocument get(TenantId tenantId, UUID id) {
-        List<UUID> chunks = jdbc.sql("""
+        List<UUID> chunks =
+                jdbc.sql("""
                         SELECT id FROM ai.knowledge_chunks WHERE tenant_id = ? AND document_id = ?
                         ORDER BY (metadata->>'chunkIndex')::INTEGER
                         """).params(tenantId.value(), id).query(UUID.class).list();
         return jdbc.sql("SELECT * FROM ai.knowledge_documents WHERE tenant_id = ? AND id = ?")
                 .params(tenantId.value(), id)
-                .query((rs, row) -> new KnowledgeDocument(id, tenantId, KnowledgeKind.valueOf(rs.getString("kind")),
-                        rs.getString("title"), rs.getString("content"), rs.getString("imported_by"),
-                        rs.getTimestamp("imported_at").toInstant(), chunks)).optional()
+                .query((rs, row) -> new KnowledgeDocument(
+                        id,
+                        tenantId,
+                        KnowledgeKind.valueOf(rs.getString("kind")),
+                        rs.getString("title"),
+                        rs.getString("content"),
+                        rs.getString("imported_by"),
+                        rs.getTimestamp("imported_at").toInstant(),
+                        chunks))
+                .optional()
                 .orElseThrow(() -> new NoSuchElementException("knowledge document not found"));
     }
 
@@ -115,17 +151,25 @@ class KnowledgeDocumentService implements KnowledgeDocuments {
                         FROM ai.knowledge_chunks c JOIN ai.knowledge_documents d
                             ON d.id = c.document_id AND d.tenant_id = c.tenant_id
                         WHERE c.tenant_id = ? AND c.id = ?
-                        """).params(tenantId.value(), chunkId)
-                .query((rs, row) -> new KnowledgePassage(chunkId, rs.getObject("document_id", UUID.class),
-                        KnowledgeKind.valueOf(rs.getString("kind")), rs.getString("title"), rs.getString("content"),
-                        rs.getInt("chunk_index"))).optional()
+                        """)
+                .params(tenantId.value(), chunkId)
+                .query((rs, row) -> new KnowledgePassage(
+                        chunkId,
+                        rs.getObject("document_id", UUID.class),
+                        KnowledgeKind.valueOf(rs.getString("kind")),
+                        rs.getString("title"),
+                        rs.getString("content"),
+                        rs.getInt("chunk_index")))
+                .optional()
                 .orElseThrow(() -> new NoSuchElementException("knowledge passage not found"));
     }
 
     private static String digest(ImportKnowledgeDocument command) {
         try {
-            String value = command.kind().name() + ":" + command.title().length() + ":" + command.title() + command.content();
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+            String value =
+                    command.kind().name() + ":" + command.title().length() + ":" + command.title() + command.content();
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(impossible);
         }

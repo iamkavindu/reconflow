@@ -24,7 +24,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(name = {"reconflow.ai.enabled", "reconflow.ai.knowledge-enabled"}, havingValue = "true")
+@ConditionalOnProperty(
+        name = {"reconflow.ai.enabled", "reconflow.ai.knowledge-enabled"},
+        havingValue = "true")
 class TenantKnowledgeSearch implements KnowledgeSearch {
 
     private final PgVectorStore vectors;
@@ -34,8 +36,13 @@ class TenantKnowledgeSearch implements KnowledgeSearch {
     private final JevDocumentFilter filter;
     private final JevDocumentReranker reranker;
 
-    TenantKnowledgeSearch(PgVectorStore vectors, KnowledgeDocuments sources, RewriteQueryTransformer rewriter,
-            MultiQueryExpander expander, JevDocumentFilter filter, JevDocumentReranker reranker) {
+    TenantKnowledgeSearch(
+            PgVectorStore vectors,
+            KnowledgeDocuments sources,
+            RewriteQueryTransformer rewriter,
+            MultiQueryExpander expander,
+            JevDocumentFilter filter,
+            JevDocumentReranker reranker) {
         this.vectors = vectors;
         this.sources = sources;
         this.rewriter = rewriter;
@@ -51,35 +58,61 @@ class TenantKnowledgeSearch implements KnowledgeSearch {
         var query = bounded(text);
         var rewritten = bounded(rewriter.transform(query).text());
         var expressions = new FilterExpressionBuilder();
-        var scope = expressions.and(expressions.eq("tenantId", tenantId.value().toString()),
-                expressions.eq("kind", kind.name())).build();
-        var retriever = VectorStoreDocumentRetriever.builder().vectorStore(vectors).topK(4)
-                .similarityThreshold(0.5).filterExpression(scope).build();
+        var scope = expressions
+                .and(expressions.eq("tenantId", tenantId.value().toString()), expressions.eq("kind", kind.name()))
+                .build();
+        var retriever = VectorStoreDocumentRetriever.builder()
+                .vectorStore(vectors)
+                .topK(4)
+                .similarityThreshold(0.5)
+                .filterExpression(scope)
+                .build();
         Map<String, Document> candidates = new LinkedHashMap<>();
         var variants = new ArrayList<>(List.of(query, rewritten));
-        variants.addAll(expander.expand(rewritten).stream().limit(4).map(value -> bounded(value.text())).toList());
+        variants.addAll(expander.expand(rewritten).stream()
+                .limit(4)
+                .map(value -> bounded(value.text()))
+                .toList());
         // Fresh queries have no model-controlled context capable of overriding the tenant filter.
-        for (var variant : variants.stream().map(Query::text).distinct().limit(5).toList()) {
+        for (var variant :
+                variants.stream().map(Query::text).distinct().limit(5).toList()) {
             for (var document : retriever.retrieve(new Query(variant))) {
                 var passage = sources.passage(tenantId, UUID.fromString(document.getId()));
                 if (passage.kind() == kind) {
                     // Rebuild from immutable sources; discard all stored judgment metadata.
-                    candidates.putIfAbsent(document.getId(), Document.builder().id(document.getId())
-                            .text(passage.content()).metadata(Map.of("title", passage.title())).build());
+                    candidates.putIfAbsent(
+                            document.getId(),
+                            Document.builder()
+                                    .id(document.getId())
+                                    .text(passage.content())
+                                    .metadata(Map.of("title", passage.title()))
+                                    .build());
                 }
             }
         }
-        List<Document> screened = filter.process(query, candidates.values().stream().limit(12).toList()).stream()
+        List<Document> screened = filter
+                .process(query, candidates.values().stream().limit(12).toList())
+                .stream()
                 .filter(value -> classified(value.getMetadata().get(JevDocumentFilter.CLASSIFICATION_METADATA_KEY)))
                 .toList();
-        return reranker.process(query, screened).stream().filter(value -> {
-            Object score = value.getMetadata().get(JevDocumentReranker.SCORE_METADATA_KEY);
-            return score instanceof Number number && Double.isFinite(number.doubleValue())
-                    && number.doubleValue() >= 0.5 && number.doubleValue() <= 1;
-        }).limit(3).map(value -> new KnowledgeEvidence("document-chunk:" + value.getId(),
-                (String) value.getMetadata().get("title"), value.getText(),
-                value.getMetadata().get(JevDocumentFilter.CLASSIFICATION_METADATA_KEY).toString(),
-                ((Number) value.getMetadata().get(JevDocumentReranker.SCORE_METADATA_KEY)).doubleValue())).toList();
+        return reranker.process(query, screened).stream()
+                .filter(value -> {
+                    Object score = value.getMetadata().get(JevDocumentReranker.SCORE_METADATA_KEY);
+                    return score instanceof Number number
+                            && Double.isFinite(number.doubleValue())
+                            && number.doubleValue() >= 0.5
+                            && number.doubleValue() <= 1;
+                })
+                .limit(3)
+                .map(value -> new KnowledgeEvidence(
+                        "document-chunk:" + value.getId(),
+                        (String) value.getMetadata().get("title"),
+                        value.getText(),
+                        value.getMetadata()
+                                .get(JevDocumentFilter.CLASSIFICATION_METADATA_KEY)
+                                .toString(),
+                        ((Number) value.getMetadata().get(JevDocumentReranker.SCORE_METADATA_KEY)).doubleValue()))
+                .toList();
     }
 
     private static boolean classified(Object value) {

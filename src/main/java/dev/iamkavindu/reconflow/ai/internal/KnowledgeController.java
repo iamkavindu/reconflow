@@ -34,7 +34,9 @@ class KnowledgeController {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Knowledge indexing is not configured.");
         }
         var saved = documents.importDocument(command);
-        return ResponseEntity.ok().location(URI.create("/api/knowledge/documents/" + saved.id())).body(saved);
+        return ResponseEntity.ok()
+                .location(URI.create("/api/knowledge/documents/" + saved.id()))
+                .body(saved);
     }
 
     @GetMapping("/api/knowledge/documents/{id}")

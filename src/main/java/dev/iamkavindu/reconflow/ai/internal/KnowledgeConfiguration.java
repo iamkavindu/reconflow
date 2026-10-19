@@ -20,45 +20,70 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = {"reconflow.ai.enabled", "reconflow.ai.knowledge-enabled"}, havingValue = "true")
+@ConditionalOnProperty(
+        name = {"reconflow.ai.enabled", "reconflow.ai.knowledge-enabled"},
+        havingValue = "true")
 class KnowledgeConfiguration {
 
     @Bean
-    EmbeddingModel knowledgeEmbeddingModel(@Value("${reconflow.ai.embedding-model}") String model,
+    EmbeddingModel knowledgeEmbeddingModel(
+            @Value("${reconflow.ai.embedding-model}") String model,
             @Value("${reconflow.ai.api-key}") String key,
             @Value("${reconflow.ai.base-url:https://api.openai.com/v1}") String url) {
         if (model.isBlank() || model.length() > 200) {
             throw new IllegalArgumentException("a bounded embedding model name is required");
         }
-        return OpenAiEmbeddingModel.builder().options(OpenAiEmbeddingOptions.builder().model(model).apiKey(key)
-                .baseUrl(url).dimensions(1536).timeout(Duration.ofSeconds(15)).maxRetries(0).build()).build();
+        return OpenAiEmbeddingModel.builder()
+                .options(OpenAiEmbeddingOptions.builder()
+                        .model(model)
+                        .apiKey(key)
+                        .baseUrl(url)
+                        .dimensions(1536)
+                        .timeout(Duration.ofSeconds(15))
+                        .maxRetries(0)
+                        .build())
+                .build();
     }
 
     @Bean
     PgVectorStore knowledgeVectorStore(JdbcTemplate jdbc, EmbeddingModel embedding) {
-        return PgVectorStore.builder(jdbc, embedding).schemaName("ai").vectorTableName("knowledge_chunks")
-                .dimensions(1536).initializeSchema(false).build();
+        return PgVectorStore.builder(jdbc, embedding)
+                .schemaName("ai")
+                .vectorTableName("knowledge_chunks")
+                .dimensions(1536)
+                .initializeSchema(false)
+                .build();
     }
 
     @Bean
     RewriteQueryTransformer knowledgeQueryRewriter(ChatModel model) {
-        return RewriteQueryTransformer.builder().chatClientBuilder(ChatClient.builder(model)).build();
+        return RewriteQueryTransformer.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .build();
     }
 
     @Bean
     MultiQueryExpander knowledgeQueryExpander(ChatModel model) {
-        return MultiQueryExpander.builder().chatClientBuilder(ChatClient.builder(model))
-                .numberOfQueries(3).includeOriginal(true).build();
+        return MultiQueryExpander.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .numberOfQueries(3)
+                .includeOriginal(true)
+                .build();
     }
 
     @Bean
     JevDocumentFilter knowledgeDocumentFilter(TypeSafeClient client) {
-        return JevDocumentFilter.builder(client).batchOptions(JevBatchOptions.ofConcurrency(2)).build();
+        return JevDocumentFilter.builder(client)
+                .batchOptions(JevBatchOptions.ofConcurrency(2))
+                .build();
     }
 
     @Bean
     JevDocumentReranker knowledgeDocumentReranker(TypeSafeClient client) {
-        return JevDocumentReranker.builder(client).topK(3).minimumScore(0.5)
-                .batchOptions(JevBatchOptions.ofConcurrency(2)).build();
+        return JevDocumentReranker.builder(client)
+                .topK(3)
+                .minimumScore(0.5)
+                .batchOptions(JevBatchOptions.ofConcurrency(2))
+                .build();
     }
 }

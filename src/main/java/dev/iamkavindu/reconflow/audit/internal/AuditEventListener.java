@@ -1,7 +1,7 @@
 package dev.iamkavindu.reconflow.audit.internal;
 
-import dev.iamkavindu.reconflow.audit.AuditResourceType;
 import dev.iamkavindu.reconflow.ai.events.KnowledgeDocumentImported;
+import dev.iamkavindu.reconflow.audit.AuditResourceType;
 import dev.iamkavindu.reconflow.cases.events.CaseNoteAdded;
 import dev.iamkavindu.reconflow.cases.events.CaseOpened;
 import dev.iamkavindu.reconflow.cases.events.CaseResolved;
@@ -34,8 +34,16 @@ class AuditEventListener {
 
     @ApplicationModuleListener
     void on(KnowledgeDocumentImported event) {
-        append(event.eventId(), event.tenantId(), AuditResourceType.KNOWLEDGE_DOCUMENT, event.documentId(),
-                "KNOWLEDGE_DOCUMENT_IMPORTED", event.actor(), event.importedAt(), null, null);
+        append(
+                event.eventId(),
+                event.tenantId(),
+                AuditResourceType.KNOWLEDGE_DOCUMENT,
+                event.documentId(),
+                "KNOWLEDGE_DOCUMENT_IMPORTED",
+                event.actor(),
+                event.importedAt(),
+                null,
+                null);
     }
 
     @ApplicationModuleListener

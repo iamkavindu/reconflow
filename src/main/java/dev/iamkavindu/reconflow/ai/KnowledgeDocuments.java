@@ -5,7 +5,10 @@ import java.util.UUID;
 
 public interface KnowledgeDocuments {
     boolean available();
+
     KnowledgeDocument importDocument(ImportKnowledgeDocument command);
+
     KnowledgeDocument get(TenantId tenantId, UUID id);
+
     KnowledgePassage passage(TenantId tenantId, UUID chunkId);
 }

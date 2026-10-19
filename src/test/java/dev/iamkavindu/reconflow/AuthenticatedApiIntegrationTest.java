@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nimbusds.jose.JOSEException;
@@ -100,7 +100,9 @@ class AuthenticatedApiIntegrationTest {
     void exposesOnlyTheBrowserShellAndPublicIssuerSettingsWithoutAuthentication() throws Exception {
         mvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Security-Policy", org.hamcrest.Matchers.containsString("frame-ancestors 'none'")));
+                .andExpect(header().string(
+                                "Content-Security-Policy",
+                                org.hamcrest.Matchers.containsString("frame-ancestors 'none'")));
         mvc.perform(get("/app.js")).andExpect(status().isOk());
         mvc.perform(get("/auth.js")).andExpect(status().isOk());
         mvc.perform(get("/app.css")).andExpect(status().isOk());

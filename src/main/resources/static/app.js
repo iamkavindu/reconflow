@@ -332,11 +332,11 @@ function knowledge() {
   const form = el('form', undefined, 'card');
   input(form, 'kind', 'Document kind', {values: ['POLICY', 'PROVIDER_DOCUMENTATION', 'PAST_CASE']});
   input(form, 'title', 'Title', {required: true, max: 200});
-  input(form, 'content', 'Document content', {multiline: true, required: true, max: 100000});
+  input(form, 'content', 'Document content', {multiline: true, required: true, max: 20000});
   const result = el('div');
   formAction(form, 'Import documentation', async data => {
     const record = await api('/api/knowledge/documents', 'POST', data);
-    result.replaceChildren(section('Imported document', fields(record, {id: 'Document ID', title: 'Title', kind: 'Kind', createdAt: 'Imported at'})));
+    result.replaceChildren(section('Imported document', fields(record, {id: 'Document ID', title: 'Title', kind: 'Kind', importedAt: 'Imported at'})));
   }); content.append(form, result);
 }
 async function navigate(view) {

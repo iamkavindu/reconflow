@@ -52,8 +52,8 @@ class ApiSecurityConfiguration {
                 .permitAll()
                 .anyRequest()
                 .authenticated());
-        http.headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives(
-                "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' "
+        http.headers(headers -> headers.contentSecurityPolicy(csp ->
+                csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' "
                         + issuer.resolve("/")
                         + "; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")));
         http.exceptionHandling(

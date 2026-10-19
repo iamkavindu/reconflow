@@ -76,9 +76,3 @@ jobs:
       - name: Stop Compose services
         if: always()
         run: docker compose down
-
-      - name: Capture formatting diagnostic
-        if: failure()
-        run: |
-          ./mvnw --batch-mode --no-transfer-progress spotless:apply
-          git diff -- src

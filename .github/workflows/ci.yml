@@ -35,13 +35,13 @@ jobs:
 
       - name: Verify Compose Kafka delivery
         run: |
-          docker compose up -d
+          docker compose --profile observability up -d
           ./mvnw --batch-mode --no-transfer-progress -Dtest=ProviderSimulationIntegrationTest -Dreconflow.test.kafka-bootstrap-servers=localhost:9092 test
 
       - name: Verify complete authenticated demo
         run: |
           python3 -m py_compile dev/demo.py
-          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
+          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo,observability --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
           demo_app_pid=$!
           trap 'kill "$demo_app_pid" 2>/dev/null || true' EXIT
           python3 dev/demo.py --base-url http://localhost:18080 > /tmp/reconflow-demo-first.json
@@ -66,6 +66,9 @@ jobs:
           PY
           npm --prefix dev/browser ci --ignore-scripts --no-audit --no-fund
           (cd dev/browser && npx playwright install --with-deps chromium && npm test)
+          python3 dev/observe.py --base-url http://localhost:18080 --log-file /tmp/reconflow-demo-app.log
+          docker compose stop kafka
+          python3 dev/observe.py --expect-broker-down
 
       - name: Capture browser screenshots
         if: always()
@@ -86,4 +89,10 @@ jobs:
 
       - name: Stop Compose services
         if: always()
-        run: docker compose down
+        run: docker compose --profile observability down
+
+      - name: Capture formatting diagnostic
+        if: failure()
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress spotless:apply
+          git diff -- src

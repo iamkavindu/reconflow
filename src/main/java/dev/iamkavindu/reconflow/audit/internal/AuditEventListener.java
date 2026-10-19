@@ -20,9 +20,14 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Component
 class AuditEventListener {
+    private static final Logger LOG = LoggerFactory.getLogger(AuditEventListener.class);
 
     private final AuditRepository repository;
     private final Clock clock;
@@ -196,7 +201,7 @@ class AuditEventListener {
             Instant occurredAt,
             UUID correlationId,
             UUID causationId) {
-        repository.append(
+        int inserted = repository.append(
                 eventId,
                 tenantId.value(),
                 type.name(),
@@ -207,6 +212,22 @@ class AuditEventListener {
                 Instant.now(clock),
                 correlationId,
                 causationId);
+        if (inserted == 1) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    LOG.atInfo()
+                            .addKeyValue("workflow.action", action)
+                            .addKeyValue("workflow.tenant_id", tenantId.value())
+                            .addKeyValue("workflow.resource_type", type.name())
+                            .addKeyValue("workflow.resource_id", resourceId)
+                            .addKeyValue("workflow.event_id", eventId)
+                            .addKeyValue("workflow.correlation_id", correlationId)
+                            .addKeyValue("workflow.causation_id", causationId)
+                            .log("Workflow audit committed action={} event_id={}", action, eventId);
+                }
+            });
+        }
     }
 
     @ApplicationModuleListener

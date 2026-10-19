@@ -40,6 +40,12 @@ services:
       CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
     volumes:
       - kafka-data:/var/lib/kafka/data
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.22.0
+    profiles: [observability]
+    ports:
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:16686:16686"
 volumes:
   postgres-data:
   kafka-data:

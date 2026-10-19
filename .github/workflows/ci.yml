@@ -43,7 +43,7 @@ jobs:
           python3 -m py_compile dev/demo.py
           java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo,observability --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
           demo_app_pid=$!
-          trap 'kill "$demo_app_pid" 2>/dev/null || true' EXIT
+          trap 'kill "$demo_app_pid" 2>/dev/null || true; wait "$demo_app_pid" 2>/dev/null || true' EXIT
           python3 dev/demo.py --base-url http://localhost:18080 > /tmp/reconflow-demo-first.json
           python3 - <<'PY'
           import json
@@ -67,6 +67,31 @@ jobs:
           npm --prefix dev/browser ci --ignore-scripts --no-audit --no-fund
           (cd dev/browser && npx playwright install --with-deps chromium && npm test)
           python3 dev/observe.py --base-url http://localhost:18080 --log-file /tmp/reconflow-demo-app.log
+
+      - name: Verify AI-enabled acceptance with local protocol fixtures
+        env:
+          AI_MODEL: fixture-model
+          AI_EMBEDDING_MODEL: fixture-embedding
+          AI_API_KEY: fixture-key
+          TYPESAFE_API_KEY: fixture-key
+          AI_BASE_URL: http://127.0.0.1:18888/v1
+          TYPESAFE_BASE_URL: http://127.0.0.1:18888
+        run: |
+          python3 -m py_compile dev/demo.py dev/ai_fixture.py
+          python3 dev/ai_fixture.py > /tmp/reconflow-ai-fixture.log 2>&1 &
+          fixture_pid=$!
+          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo,ai,observability --server.port=18080 > /tmp/reconflow-ai-app.log 2>&1 &
+          ai_app_pid=$!
+          trap 'kill "$ai_app_pid" "$fixture_pid" 2>/dev/null || true' EXIT
+          python3 dev/demo.py --base-url http://localhost:18080 --investigate --investigation-timeout 90 > /tmp/reconflow-ai-demo.json
+          npm --prefix dev/browser run test:ai
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('/tmp/reconflow-ai-demo.json').read_text())
+          assert all(result['aiAcceptance'].values())
+          print('AI-enabled acceptance passed using fixed local protocol fixtures; live AI quality is not evaluated.')
+          PY
           docker compose stop kafka
           python3 dev/observe.py --expect-broker-down
 
@@ -81,11 +106,24 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Capture acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: acceptance-evidence
+          path: |
+            /tmp/reconflow-demo-first.json
+            /tmp/reconflow-ai-demo.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Capture Kafka diagnostics
         if: failure()
         run: |
           docker compose logs --no-color
           if test -f /tmp/reconflow-demo-app.log; then cat /tmp/reconflow-demo-app.log; fi
+          if test -f /tmp/reconflow-ai-app.log; then cat /tmp/reconflow-ai-app.log; fi
+          if test -f /tmp/reconflow-ai-fixture.log; then cat /tmp/reconflow-ai-fixture.log; fi
 
       - name: Stop Compose services
         if: always()

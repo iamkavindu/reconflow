@@ -2,6 +2,6 @@
   "name": "reconflow-browser-checks",
   "private": true,
   "type": "module",
-  "scripts": {"test": "playwright test"},
+  "scripts": {"test": "playwright test", "test:ai": "playwright test --config ai.config.js"},
   "devDependencies": {"@playwright/test": "1.62.1"}
 }

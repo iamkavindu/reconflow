@@ -49,11 +49,17 @@ python3 dev/demo.py --investigate
 
 The administrator imports a demo review policy and simulated provider settlement
 guide, then requests an investigation of the USD 3.20 fee case. The result is
-included in the JSON output. The documents describe reported evidence and the
+included in the JSON output. The runner requires a readable documentation
+citation and accepted recommendation, verifies investigation lifecycle audit,
+checks other-tenant investigation/citation denial when that token is available,
+and checks that the case and financial evidence remain unchanged. The
+`aiAcceptance` output reports these checks. The documents describe reported evidence and the
 human review requirement; they do not invent a contractual fee tariff.
 Model and judgment endpoints can be overridden using the existing AI settings.
 This optional path makes live external model calls; the regular demo needs no
-AI credentials. `--investigation-timeout` bounds how long the runner waits.
+AI credentials. `--investigation-timeout` bounds how long the runner waits. See
+[acceptance](acceptance.md) for the separate human assessment required of live
+recommendation quality; a completed response alone is not that assessment.
 
 The case remains unresolved. Review the actual source evidence and limitations
 before selecting a resolution. An authorized analyst/admin can then call:

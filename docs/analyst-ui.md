@@ -70,5 +70,11 @@ and checks viewer controls. A second check rejects unsolicited login callbacks
 before any token exchange. Backend tests continue to enforce roles and tenant
 access independently of UI controls.
 
-The browser check uses no live model calls; model protocol and retrieval tests
-cover the configured AI path separately.
+An additional AI-enabled packaged-application check uses local protocol fixtures
+and real pgvector/Keycloak/Kafka. It requests an investigation through the browser,
+reads its cited passage, verifies that AI does not fill or submit the human
+resolution form, then explicitly resolves the case and checks audit and the
+retained reconciliation result. Run it with `npm --prefix dev/browser run test:ai`
+against the dedicated CI acceptance setup; it reads the AI demo's result file.
+These checks use no live model calls and do not establish AI quality. See the
+[acceptance guide](acceptance.md) for live verification.

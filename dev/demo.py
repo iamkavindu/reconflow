@@ -232,7 +232,17 @@ def verify_isolation(api, other, run_id, first):
     return True
 
 
-def investigate(api, admin, fee_case, timeout):
+def investigate(api, admin, fee_case, timeout, other=None):
+    case_path = f"/api/cases/{fee_case['caseId']}"
+    rec_path = f"/api/reconciliations/{fee_case['reconciliationId']}"
+    original_case = api.get(case_path)
+    if original_case["status"] == "RESOLVED":
+        raise DemoError("The fee case is already resolved; use a new run ID for investigation acceptance.")
+    original_rec = api.get(rec_path)
+    paths = [case_path, rec_path, rec_path + "/settlements",
+             "/api/transactions/" + identifier(original_rec, "transactionId"),
+             "/api/provider-transactions/" + fee_case["providerTransactionId"]]
+    original = {path: api.get(path) for path in paths}
     for kind, title, content in (
         ("POLICY", "Demo fee review policy", "A reported processing fee can explain a gross/net difference. An analyst must verify settlement evidence and document a human decision before accepting the variance. A reported fee does not prove the contractual tariff."),
         ("PROVIDER_DOCUMENTATION", "Simulated provider settlement guide", "The simulated provider reports gross, fee and net settlement amounts. Gross minus the reported fee equals net. These reports provide evidence; they do not independently validate the fee contract."),
@@ -249,6 +259,33 @@ def investigate(api, admin, fee_case, timeout):
     result = wait_for(complete, timeout, "AI investigation")
     if result["status"] != "COMPLETED":
         raise DemoError("The investigation retained a FAILED attempt; inspect its safe failure reason through the API.")
+    for path, record in original.items():
+        if api.get(path) != record:
+            raise DemoError("Investigation changed case or financial state: " + path)
+    findings = result["result"]
+    if not findings["evidence"] or not findings["judgment"]["accepted"]:
+        raise DemoError("The completed recommendation lacks accepted supporting evidence.")
+    passages = [entry["reference"].removeprefix("document-chunk:") for entry in findings["evidence"]
+                if entry["reference"].startswith("document-chunk:")]
+    if not passages:
+        raise DemoError("Acceptance requires a retrieved documentation citation; review the retained recommendation.")
+    for passage_id in passages:
+        api.get("/api/knowledge/passages/" + passage_id)
+    if other:
+        for path in ["/api/investigations/" + inv_id, case_path + "/investigations",
+                     *["/api/knowledge/passages/" + passage_id for passage_id in passages]]:
+            try:
+                other.get(path)
+            except ApiError as error:
+                if error.status == 404:
+                    continue
+                raise
+            raise DemoError("Another tenant could read investigation evidence: " + path)
+    def audited():
+        actions = {entry["action"] for entry in api.get("/api/audit/INVESTIGATION/" + inv_id)}
+        return True if {"INVESTIGATION_REQUESTED", "INVESTIGATION_RUNNING", "INVESTIGATION_COMPLETED"} <= actions else None
+    wait_for(audited, timeout, "investigation lifecycle audit")
+    print("AI acceptance: evidence/citations and lifecycle audit verified; case and financial state unchanged.", file=sys.stderr)
     return result
 
 
@@ -285,7 +322,9 @@ def main():
     output = {"runId": args.run_id, "tenantId": identifier(session, "tenantId"), "scenarios": results,
               "tenantIsolationVerified": isolation, "dashboard": api.get("/api/dashboard")}
     if args.investigate:
-        output["investigation"] = investigate(api, admin, next(value for value in results if value["name"] == "provider_fee"), args.investigation_timeout)
+        output["investigation"] = investigate(api, admin, next(value for value in results if value["name"] == "provider_fee"), args.investigation_timeout, other)
+        output["aiAcceptance"] = {"stateUnchanged": True, "citationsReadable": True,
+                                  "lifecycleAuditVerified": True, "tenantIsolationVerified": bool(other)}
     print(json.dumps(output, indent=2, default=str))
 
 

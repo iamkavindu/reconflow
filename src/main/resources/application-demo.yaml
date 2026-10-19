@@ -6,7 +6,13 @@ spring:
     username: reconflow
     password: reconflow
   flyway:
+    connect-retries: 30
     locations: classpath:db/migration,classpath:db/demo
 reconflow:
+  reconciliation:
+    matching-window: PT30S
   kafka:
     enabled: true
+
+server:
+  address: 127.0.0.1

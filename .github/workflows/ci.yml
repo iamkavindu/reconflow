@@ -35,13 +35,48 @@ jobs:
 
       - name: Verify Compose Kafka delivery
         run: |
-          docker compose up -d kafka
+          docker compose up -d
           ./mvnw --batch-mode --no-transfer-progress -Dtest=ProviderSimulationIntegrationTest -Dreconflow.test.kafka-bootstrap-servers=localhost:9092 test
+
+      - name: Verify complete authenticated demo
+        run: |
+          python3 -m py_compile dev/demo.py
+          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
+          demo_app_pid=$!
+          trap 'kill "$demo_app_pid" 2>/dev/null || true' EXIT
+          python3 dev/demo.py --base-url http://localhost:18080 > /tmp/reconflow-demo-first.json
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+          first = json.loads(Path("/tmp/reconflow-demo-first.json").read_text())
+          second = subprocess.run([sys.executable, "dev/demo.py", "--base-url", "http://localhost:18080",
+                                   "--run-id", first["runId"]], check=True, capture_output=True, text=True)
+          replay = json.loads(second.stdout)
+          assert len(first["scenarios"]) == 8
+          assert first["tenantIsolationVerified"] and replay["tenantIsolationVerified"]
+          for original, repeated in zip(first["scenarios"], replay["scenarios"], strict=True):
+              assert original == repeated, (original["name"], "replay changed financial identities or audit evidence")
+              assert original["auditVerified"]
+          assert first["dashboard"] == {"transactionsProcessed": 7, "matched": 2, "reviewRequired": 4,
+                                        "unmatched": 2, "openCases": 6, "resolvedCases": 0}
+          assert replay["dashboard"] == first["dashboard"]
+          print("All eight scenarios, both tenant boundaries, audit checks and idempotent replay passed.")
+          PY
 
       - name: Capture Kafka diagnostics
         if: failure()
-        run: docker compose logs --no-color kafka
+        run: |
+          docker compose logs --no-color
+          if test -f /tmp/reconflow-demo-app.log; then cat /tmp/reconflow-demo-app.log; fi
 
       - name: Stop Compose services
         if: always()
         run: docker compose down
+
+      - name: Capture formatting diagnostic
+        if: failure()
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress spotless:apply
+          git diff -- src

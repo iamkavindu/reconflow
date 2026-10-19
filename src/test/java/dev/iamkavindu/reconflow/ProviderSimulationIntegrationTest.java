@@ -19,6 +19,7 @@ import dev.iamkavindu.reconflow.tenancy.UserRole;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.junit.jupiter.api.AfterAll;
@@ -68,6 +69,7 @@ class ProviderSimulationIntegrationTest {
                 AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG,
                 2000))) {
             await().atMost(Duration.ofSeconds(60))
+                    .ignoreException(ExecutionException.class)
                     .untilAsserted(() ->
                             assertThat(admin.describeCluster().nodes().get()).isNotEmpty());
         }

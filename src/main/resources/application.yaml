@@ -17,6 +17,9 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 reconflow:
+  ai:
+    enabled: false
+    knowledge-enabled: false
   security:
     enabled: true
     issuer: ${OIDC_ISSUER:http://localhost:8180/realms/reconflow}

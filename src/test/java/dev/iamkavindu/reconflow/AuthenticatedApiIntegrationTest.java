@@ -199,6 +199,12 @@ class AuthenticatedApiIntegrationTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/cases/not-a-uuid").header("Authorization", token("analyst", TENANT)))
                 .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/cases/" + UUID.randomUUID() + "/investigations")
+                        .header("Authorization", token("analyst", TENANT)))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(post("/api/cases/" + UUID.randomUUID() + "/investigations")
+                        .header("Authorization", token("viewer", TENANT)))
+                .andExpect(status().isForbidden());
         mvc.perform(get("/v3/api-docs").header("Authorization", token("analyst", TENANT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/transactions']").exists());

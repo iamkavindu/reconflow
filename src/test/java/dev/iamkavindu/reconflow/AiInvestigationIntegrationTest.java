@@ -1,0 +1,295 @@
+package dev.iamkavindu.reconflow;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import dev.iamkavindu.reconflow.cases.CaseQueries;
+import dev.iamkavindu.reconflow.cases.CaseView;
+import dev.iamkavindu.reconflow.cases.InvestigationCommands;
+import dev.iamkavindu.reconflow.cases.InvestigationQueries;
+import dev.iamkavindu.reconflow.cases.InvestigationStatus;
+import dev.iamkavindu.reconflow.cases.InvestigationView;
+import dev.iamkavindu.reconflow.provider.ImportSettlementCommand;
+import dev.iamkavindu.reconflow.provider.IngestProviderEventCommand;
+import dev.iamkavindu.reconflow.provider.ProviderTransactionCommands;
+import dev.iamkavindu.reconflow.provider.ProviderTransactionStatus;
+import dev.iamkavindu.reconflow.provider.ProviderTransactionType;
+import dev.iamkavindu.reconflow.provider.SettlementCommands;
+import dev.iamkavindu.reconflow.provider.SettlementLine;
+import dev.iamkavindu.reconflow.reconciliation.ReconciliationQueries;
+import dev.iamkavindu.reconflow.tenancy.Actor;
+import dev.iamkavindu.reconflow.tenancy.CurrentActor;
+import dev.iamkavindu.reconflow.tenancy.TenantId;
+import dev.iamkavindu.reconflow.tenancy.UserRole;
+import dev.iamkavindu.reconflow.transactions.RecordTransactionCommand;
+import dev.iamkavindu.reconflow.transactions.TransactionCommands;
+import dev.iamkavindu.reconflow.transactions.TransactionType;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Currency;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
+@Import({TestcontainersConfiguration.class, AiInvestigationIntegrationTest.ActorConfiguration.class})
+@SpringBootTest(properties = {
+    "reconflow.kafka.enabled=false", "reconflow.security.enabled=false", "reconflow.ai.enabled=true",
+    "reconflow.ai.model=contract-test", "reconflow.ai.api-key=fake-model-key",
+    "reconflow.ai.typesafe-api-key=fake-judge-key", "reconflow.reconciliation.scheduling-enabled=false"
+})
+class AiInvestigationIntegrationTest {
+
+    private static final TenantId TENANT = new TenantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+    private static final FakeModels MODELS = new FakeModels();
+
+    @DynamicPropertySource
+    static void endpoints(DynamicPropertyRegistry properties) {
+        properties.add("reconflow.ai.base-url", () -> MODELS.url() + "/v1");
+        properties.add("reconflow.ai.typesafe-base-url", MODELS::url);
+    }
+
+    @AfterAll
+    static void stop() {
+        MODELS.server.stop(0);
+    }
+
+    @Autowired
+    InvestigationCommands commands;
+
+    @Autowired
+    InvestigationQueries investigations;
+
+    @Autowired
+    TransactionCommands transactions;
+
+    @Autowired
+    ProviderTransactionCommands provider;
+
+    @Autowired
+    SettlementCommands settlements;
+
+    @Autowired
+    ReconciliationQueries reconciliations;
+
+    @Autowired
+    CaseQueries cases;
+
+    @BeforeEach
+    void resetModels() {
+        MODELS.mode = Mode.SUCCESS;
+        MODELS.chatCalls.set(0);
+        MODELS.judgeCalls.set(0);
+        MODELS.toolOutputs.clear();
+    }
+
+    @Test
+    void executesReadOnlyToolsAndOneJudgmentRefinementWithoutChangingFinancialOrCaseState() {
+        MODELS.mode = Mode.REFINE;
+        var original = exception();
+        var determination = reconciliations.getReconciliationById(TENANT, original.reconciliationId());
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.COMPLETED);
+        assertThat(completed.result().judgment().refinementAttempts()).isEqualTo(1);
+        assertThat(completed.result().judgment().accepted()).isTrue();
+        assertThat(completed.result().evidence().getFirst().reference()).isEqualTo(MODELS.reference);
+        assertThat(completed.result().limitations()).anyMatch(value -> value.contains("No screened policy"));
+        assertThat(MODELS.chatCalls).hasValue(3);
+        assertThat(MODELS.judgeCalls).hasValue(2);
+        assertThat(MODELS.toolOutputs).anyMatch(value -> value.contains(MODELS.reference));
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+        assertThat(reconciliations.getReconciliationById(TENANT, original.reconciliationId())).isEqualTo(determination);
+    }
+
+    @Test
+    void rejectsFabricatedEvidenceAfterOneBoundedRefinement() {
+        MODELS.mode = Mode.FABRICATED;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(completed.result()).isNull();
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(0);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    @Test
+    void neverExposesARequestedCaseWriteTool() {
+        MODELS.mode = Mode.ILLEGAL_WRITE;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(MODELS.chatCalls.get()).isBetween(1, 8);
+        assertThat(MODELS.judgeCalls).hasValue(0);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    @Test
+    void rejectedRecommendationsCannotRefineIndefinitely() {
+        MODELS.mode = Mode.REJECT;
+        var original = exception();
+        assertThat(execute(original).status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(2);
+    }
+
+    @Test
+    void judgeOutagesFailClosedWithoutPersistingProviderResponseDetails() {
+        MODELS.mode = Mode.OUTAGE;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(completed.result()).isNull();
+        assertThat(completed.failureReason()).doesNotContain("secret-material", "fake-judge-key");
+        assertThat(MODELS.judgeCalls).hasValue(1);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    private InvestigationView execute(CaseView investigationCase) {
+        var requested = commands.request(investigationCase.caseId());
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(investigations.get(TENANT, requested.investigationId()).status())
+                        .isIn(InvestigationStatus.COMPLETED, InvestigationStatus.FAILED));
+        return investigations.get(TENANT, requested.investigationId());
+    }
+
+    private CaseView exception() {
+        String reference = "AI-" + UUID.randomUUID();
+        Instant now = Instant.now();
+        var line = new SettlementLine("pi-" + reference, new BigDecimal("100.00"),
+                new BigDecimal("3.20"), new BigDecimal("96.80"));
+        var settlement = settlements.importSettlement(new ImportSettlementCommand(TENANT, "stripe", "set-" + reference,
+                Currency.getInstance("USD"), line.grossAmount(), line.feeAmount(), line.netAmount(), now, List.of(line)));
+        MODELS.reference = "settlement:" + settlement.settlementId().value();
+        var transaction = transactions.recordTransaction(new RecordTransactionCommand(reference, TransactionType.PAYMENT,
+                new BigDecimal("100.00"), Currency.getInstance("USD"), now));
+        provider.ingestProviderEvent(new IngestProviderEventCommand(TENANT, "evt-" + reference, "stripe", "pi-" + reference,
+                reference, ProviderTransactionType.PAYMENT, new BigDecimal("96.80"), Currency.getInstance("USD"),
+                ProviderTransactionStatus.SUCCEEDED, now, UUID.randomUUID(), UUID.randomUUID()));
+        List<CaseView> found = new ArrayList<>();
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            var reconciliation = reconciliations.getReconciliation(TENANT, transaction.transactionId());
+            found.add(cases.getCaseForReconciliation(TENANT, reconciliation.reconciliationId()));
+        });
+        return found.getLast();
+    }
+
+    enum Mode { SUCCESS, REFINE, FABRICATED, ILLEGAL_WRITE, REJECT, OUTAGE }
+
+    static class FakeModels {
+
+        final JsonMapper json = JsonMapper.builder().build();
+        final HttpServer server;
+        final AtomicInteger chatCalls = new AtomicInteger();
+        final AtomicInteger judgeCalls = new AtomicInteger();
+        final List<String> toolOutputs = new CopyOnWriteArrayList<>();
+        volatile Mode mode = Mode.SUCCESS;
+        volatile String reference;
+
+        FakeModels() {
+            try {
+                server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+                server.createContext("/", this::handle);
+                server.start();
+            } catch (IOException error) {
+                throw new ExceptionInInitializerError(error);
+            }
+        }
+
+        String url() {
+            return "http://127.0.0.1:" + server.getAddress().getPort();
+        }
+
+        void handle(HttpExchange exchange) throws IOException {
+            JsonNode input = json.readTree(exchange.getRequestBody());
+            if (input.has("messages")) {
+                for (var message : input.get("messages")) {
+                    if ("tool".equals(message.get("role").asString())) {
+                        toolOutputs.add(message.get("content").asString());
+                    }
+                }
+                int call = chatCalls.incrementAndGet();
+                if (mode == Mode.ILLEGAL_WRITE) {
+                    respond(exchange, 200, chat(null, "resolveCase"));
+                } else if ((mode == Mode.SUCCESS || mode == Mode.REFINE) && call == 1) {
+                    respond(exchange, 200, chat(null, "getSettlement"));
+                } else {
+                    String citation = mode == Mode.FABRICATED ? "settlement:another-tenants-record" : reference;
+                    String draft = json.writeValueAsString(Map.of(
+                            "summary", "The reported fee explains the gross/net difference and needs human review.",
+                            "likelyCause", "Provider-reported fee", "evidence", List.of(Map.of("reference", citation,
+                                    "explanation", "Reported gross 100, fee 3.20, net 96.80")),
+                            "suggestedResolution", "ACCEPTED_FEE_VARIANCE", "confidence", 0.8,
+                            "limitations", List.of("The contractual fee policy is unavailable.")));
+                    respond(exchange, 200, chat(draft, null));
+                }
+            } else {
+                int call = judgeCalls.incrementAndGet();
+                if (mode == Mode.OUTAGE) {
+                    respond(exchange, 503, "{\"error\":\"secret-material\"}");
+                    return;
+                }
+                double groundedness = mode == Mode.REJECT || (mode == Mode.REFINE && call == 1) ? 0.1 : 0.95;
+                respond(exchange, 200, json.writeValueAsString(Map.of("model", "jev-contract-test", "answers", Map.of(
+                        "groundedness", Map.of("type", "noul", "noul", groundedness),
+                        "relevance", Map.of("type", "noul", "noul", 0.95),
+                        "advisory_only", Map.of("type", "noul", "noul", 0.99)), "usage", Map.of())));
+            }
+        }
+
+        String chat(String content, String tool) {
+            Map<String, Object> message = new java.util.LinkedHashMap<>();
+            message.put("role", "assistant");
+            message.put("content", content);
+            if (tool != null) {
+                message.put("tool_calls", List.of(Map.of("id", "call-contract", "type", "function",
+                        "function", Map.of("name", tool, "arguments", "{}"))));
+            }
+            return json.writeValueAsString(Map.of("id", "chatcmpl-contract", "object", "chat.completion",
+                    "created", Instant.now().getEpochSecond(), "model", "contract-test",
+                    "choices", List.of(Map.of("index", 0, "message", message,
+                            "finish_reason", tool == null ? "stop" : "tool_calls")),
+                    "usage", Map.of("prompt_tokens", 10, "completion_tokens", 10, "total_tokens", 20)));
+        }
+
+        void respond(HttpExchange exchange, int status, String body) throws IOException {
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(bytes);
+            }
+        }
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ActorConfiguration {
+
+        @Bean
+        @Primary
+        CurrentActor testActor() {
+            return () -> new Actor(TENANT, "analyst", UserRole.ANALYST);
+        }
+    }
+}

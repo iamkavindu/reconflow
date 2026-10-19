@@ -135,6 +135,7 @@ class TenantKnowledgeIntegrationTest {
         MODELS.mode = Mode.SUCCESS;
         MODELS.screened.clear();
         MODELS.chatCalls.set(0);
+        MODELS.embeddingCalls.set(0);
     }
 
     @Test
@@ -144,6 +145,7 @@ class TenantKnowledgeIntegrationTest {
                 KnowledgeKind.PROVIDER_DOCUMENTATION, "Document " + UUID.randomUUID(), text);
         var saved = documents.importDocument(command);
         assertThat(documents.importDocument(command)).isEqualTo(saved);
+        assertThat(MODELS.embeddingCalls).hasValue(1);
         assertThat(saved.chunkIds()).hasSize(2);
         assertThat(saved.chunkIds().stream()
                         .map(id -> documents.passage(TENANT, id).content())
@@ -178,6 +180,7 @@ class TenantKnowledgeIntegrationTest {
         actor.current.set(new Actor(TENANT, "admin", UserRole.ADMIN));
         MODELS.mode = Mode.EMBEDDING_OUTAGE;
         assertThatThrownBy(() -> documents.importDocument(command)).isInstanceOf(RuntimeException.class);
+        assertThat(MODELS.embeddingCalls).hasValue(1);
         assertThat(jdbc.sql("SELECT count(*) FROM ai.knowledge_documents WHERE title = ?")
                         .param(command.title())
                         .query(Long.class)
@@ -308,6 +311,7 @@ class TenantKnowledgeIntegrationTest {
         final HttpServer server;
         final List<String> screened = new CopyOnWriteArrayList<>();
         final AtomicInteger chatCalls = new AtomicInteger();
+        final AtomicInteger embeddingCalls = new AtomicInteger();
         volatile Mode mode = Mode.SUCCESS;
         volatile String reference;
 
@@ -328,6 +332,7 @@ class TenantKnowledgeIntegrationTest {
         void handle(HttpExchange exchange) throws IOException {
             JsonNode input = json.readTree(exchange.getRequestBody());
             if (exchange.getRequestURI().getPath().endsWith("/embeddings")) {
+                embeddingCalls.incrementAndGet();
                 if (mode == Mode.EMBEDDING_OUTAGE) {
                     respond(exchange, 503, Map.of("error", "unavailable"));
                     return;

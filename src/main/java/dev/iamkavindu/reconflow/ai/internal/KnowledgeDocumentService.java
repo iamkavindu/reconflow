@@ -11,6 +11,7 @@ import dev.iamkavindu.reconflow.tenancy.TenantId;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -80,7 +81,7 @@ class KnowledgeDocumentService implements KnowledgeDocuments {
                         command.content(),
                         digest,
                         actor.subject(),
-                        now)
+                        Timestamp.from(now))
                 .update();
         if (inserted == 0) {
             UUID original = jdbc.sql("SELECT id FROM ai.knowledge_documents WHERE tenant_id = ? AND digest = ?")

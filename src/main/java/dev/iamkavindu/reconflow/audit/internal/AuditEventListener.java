@@ -18,10 +18,10 @@ import dev.iamkavindu.reconflow.transactions.events.TransactionRecorded;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
-import org.springframework.modulith.events.ApplicationModuleListener;
-import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.modulith.events.ApplicationModuleListener;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 

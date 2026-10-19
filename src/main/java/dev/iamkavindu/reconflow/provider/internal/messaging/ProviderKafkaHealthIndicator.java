@@ -9,17 +9,15 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
-import org.springframework.stereotype.Component;
 import org.springframework.kafka.core.KafkaAdmin;
+import org.springframework.stereotype.Component;
 
 @Component("providerKafkaHealthIndicator")
 class ProviderKafkaHealthIndicator implements HealthIndicator {
     private final Map<String, Object> properties;
     private final boolean enabled;
 
-    ProviderKafkaHealthIndicator(
-            KafkaAdmin kafkaAdmin,
-            @Value("${reconflow.kafka.enabled:true}") boolean enabled) {
+    ProviderKafkaHealthIndicator(KafkaAdmin kafkaAdmin, @Value("${reconflow.kafka.enabled:true}") boolean enabled) {
         this.properties = new HashMap<>(kafkaAdmin.getConfigurationProperties());
         this.properties.put(AdminClientConfig.REQUEST_TIMEOUT_MS_CONFIG, 1500);
         this.properties.put(AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, 1500);

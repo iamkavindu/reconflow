@@ -6,7 +6,9 @@ the investigation location. Read it with `GET /api/investigations/{id}`, or
 read the case's investigation history with `GET /api/cases/{caseId}/investigations`.
 All requests require the existing tenant-scoped bearer authentication.
 
-The `ai` profile enables execution. Configure `AI_MODEL`, `AI_API_KEY`, and
+The [local environment](local-development.md) enables execution through the
+single `local` profile. The separate `ai` capability profile remains available
+for explicitly composed environments. Configure `AI_MODEL`, `AI_API_KEY`, and
 `TYPESAFE_API_KEY`; optional `AI_BASE_URL` and `TYPESAFE_BASE_URL` select compatible
 endpoints. Credentials belong in environment variables. With execution disabled,
 requesting an investigation returns `503 Service Unavailable`.

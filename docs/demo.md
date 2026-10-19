@@ -39,13 +39,16 @@ policy, increase the runner's `--timeout`, for example `--timeout 700`.
 
 ## Optional AI investigation
 
-Set `AI_MODEL`, `AI_EMBEDDING_MODEL`, `AI_API_KEY`, and `TYPESAFE_API_KEY`, then
-start with both profiles:
+Follow the [local running guide](local-development.md) to set `AI_MODEL`,
+`AI_EMBEDDING_MODEL`, `AI_API_KEY`, and `TYPESAFE_API_KEY`, then start with the
+local environment profile:
 
 ```sh
-./mvnw spring-boot:run -Dspring-boot.run.profiles=demo,ai
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 python3 dev/demo.py --investigate
 ```
+
+The existing `demo,ai` combination remains valid when observability is not needed.
 
 The administrator imports a demo review policy and simulated provider settlement
 guide, then requests an investigation of the USD 3.20 fee case. The result is

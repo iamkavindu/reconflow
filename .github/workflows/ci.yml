@@ -41,7 +41,7 @@ jobs:
       - name: Verify complete authenticated demo
         run: |
           python3 -m py_compile dev/demo.py
-          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo,observability --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
+          LOCAL_AI_ENABLED=false java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --server.port=18080 > /tmp/reconflow-demo-app.log 2>&1 &
           demo_app_pid=$!
           trap 'kill "$demo_app_pid" 2>/dev/null || true; wait "$demo_app_pid" 2>/dev/null || true' EXIT
           python3 dev/demo.py --base-url http://localhost:18080 > /tmp/reconflow-demo-first.json
@@ -80,7 +80,7 @@ jobs:
           python3 -m py_compile dev/demo.py dev/ai_fixture.py
           python3 dev/ai_fixture.py > /tmp/reconflow-ai-fixture.log 2>&1 &
           fixture_pid=$!
-          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo,ai,observability --server.port=18080 > /tmp/reconflow-ai-app.log 2>&1 &
+          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --server.port=18080 > /tmp/reconflow-ai-app.log 2>&1 &
           ai_app_pid=$!
           trap 'kill "$ai_app_pid" "$fixture_pid" 2>/dev/null || true' EXIT
           python3 dev/demo.py --base-url http://localhost:18080 --investigate --investigation-timeout 90 > /tmp/reconflow-ai-demo.json

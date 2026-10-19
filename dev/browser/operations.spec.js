@@ -4,6 +4,8 @@ import fs from 'node:fs';
 async function login(page, username) {
   await page.goto('/');
   await page.getByRole('button', {name: 'Sign in', exact: true}).click();
+  await page.locator('#password').waitFor();
+  if (await page.locator('#reset-login').isVisible()) await page.locator('#reset-login').click();
   await page.locator('#username').fill(username);
   await page.locator('#password').fill('demo-password');
   await page.locator('#kc-login').click();
@@ -37,8 +39,8 @@ test('real Keycloak sign-in, search, human case resolution, audit and role contr
   await page.getByRole('button', {name: 'Open', exact: true}).click();
   await page.getByRole('button', {name: 'View reconciliation', exact: true}).click();
   await expect(page.getByRole('heading', {name: 'Deterministic determination'})).toBeVisible();
-  await expect(page.locator('#content')).toContainText('AMOUNT_MISMATCH');
-  await expect(page.locator('#content')).toContainText('FEE_VARIANCE');
+  await expect(page.locator('#content')).toContainText('AMOUNT MISMATCH');
+  await expect(page.locator('#content')).toContainText('FEE VARIANCE');
   await page.getByRole('button', {name: 'Open exception case'}).click();
   await expect(page.getByRole('heading', {name: 'Exception case', exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Start review', exact: true}).click();

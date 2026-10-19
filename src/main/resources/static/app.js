@@ -69,6 +69,7 @@ function badge(value) { return el('span', human(value), 'badge ' + value); }
 function fields(record, labels) {
   const list = el('dl');
   for (const [key, label] of Object.entries(labels)) {
+    if (!(key in record)) continue;
     let value = record[key];
     if (value?.value) value = value.value;
     else if (value && typeof value === 'object') value = JSON.stringify(value, null, 2);
@@ -129,7 +130,7 @@ function audit(type, id) {
     const records = await api(`/api/audit/${type}/${id}?limit=25` + (before ? '&before=' + before : ''));
     rows.push(...records);
     box.replaceChildren(el('h2', 'Audit history'), table(['Time', 'Action', 'Actor', 'Details'], rows.map(row =>
-      [time(row.occurredAt), human(row.action), row.actor, 'Correlation ' + row.correlationId])), load);
+      [time(row.occurredAt), human(row.action), row.actor || 'SYSTEM', row.correlationId ? 'Correlation ' + row.correlationId : 'Event ' + row.eventId])), load);
     before = records.at(-1)?.sequence;
     load.textContent = records.length === 25 ? 'Load earlier entries' : 'All available entries loaded';
     load.disabled = records.length < 25;
@@ -206,6 +207,7 @@ async function overview(version) {
   content.append(metrics, button('Refresh overview', () => navigate('dashboard'), true));
 }
 async function openRecord(view, id) {
+  highlight(view);
   const version = ++generation;
   message();
   try {
@@ -230,13 +232,23 @@ async function openRecord(view, id) {
   } catch (error) { if (version === generation) message(error.message); }
 }
 function settlementPanel(records) {
-  return section('Settlement evidence', ...(records.length ? records.map(record => fields(record, {
-    providerSettlementReference: 'Settlement reference', currency: 'Currency', grossAmount: 'Gross', feeAmount: 'Reported fee', netAmount: 'Net', lines: 'Source lines'})) : [el('p', 'No settlement evidence recorded.') ]));
+  const box = section('Settlement evidence');
+  if (!records.length) box.append(el('p', 'No settlement evidence recorded.'));
+  for (const record of records) {
+    box.append(fields(record, {providerSettlementReference: 'Settlement reference', currency: 'Currency', grossAmount: 'Gross',
+      feeAmount: 'Reported fee', netAmount: 'Net'}), table(['Provider reference', 'Gross', 'Fee', 'Net'], record.lines.map(line =>
+      [line.providerTransactionReference, line.grossAmount, line.feeAmount, line.netAmount])));
+  }
+  return box;
 }
 async function reconciliationDetail(record, version) {
   content.append(section('Deterministic determination', badge(record.status), fields(record, {businessReference: 'Business reference', transactionId: 'Internal transaction ID',
     providerTransactionId: 'Matched provider record', providerOriginId: 'Origin provider record', startedAt: 'Started at', expiresAt: 'Matching deadline', decidedAt: 'Decided at',
-    comparedProviderTransactionIds: 'Compared provider records', ruleEvaluations: 'Rule evaluations', discrepancies: 'Discrepancies'})));
+    matchedAt: 'Matched at'})));
+  content.append(section('Rule evaluations', table(['Rule', 'Satisfied', 'Expected', 'Actual'], record.ruleEvaluations.map(rule =>
+    [human(rule.rule), rule.satisfied ? 'Yes' : 'No', rule.expected, rule.actual]))));
+  content.append(section('Discrepancies', record.discrepancies.length ? table(['Finding', 'Explanation', 'Expected', 'Actual', 'Detected'],
+    record.discrepancies.map(item => [human(item.type), item.description, item.expected, item.actual, time(item.detectedAt)])) : el('p', 'No discrepancies.')));
   const actions = el('div', undefined, 'actions');
   if (record.transactionId) actions.append(button('Open internal evidence', () => openRecord('transactions', uid(record.transactionId)), true));
   const providerIds = new Set([record.providerTransactionId, record.providerOriginId, ...record.comparedProviderTransactionIds].filter(Boolean).map(uid));
@@ -291,7 +303,10 @@ async function caseDetail(record, version) {
     box.append(el('h3', uid(item.investigationId)), badge(item.status), el('p', `Requested ${time(item.requestedAt)}`, 'muted'));
     if (item.failureReason) box.append(el('p', item.failureReason));
     if (item.result) {
-      box.append(fields(item.result, {summary: 'Summary', likelyCause: 'Likely cause', suggestedResolution: 'Suggested resolution', confidence: 'Model confidence (not certainty)', limitations: 'Limitations', judgment: 'Screening result'}));
+      box.append(fields(item.result, {summary: 'Summary', likelyCause: 'Likely cause', suggestedResolution: 'Suggested resolution', confidence: 'Model confidence (not certainty)'}));
+      const limitations = el('ul');
+      item.result.limitations.forEach(value => limitations.append(el('li', value)));
+      box.append(el('h3', 'Limitations'), limitations, fields(item.result.judgment, {accepted: 'Screening accepted', groundedness: 'Groundedness', relevance: 'Relevance', refinementAttempts: 'Refinement attempts'}));
       for (const evidence of item.result.evidence) {
         box.append(el('p', evidence.explanation), el('p', evidence.reference, 'id'));
         const match = /^document-chunk:([0-9a-f-]{36})$/i.exec(evidence.reference);
@@ -340,13 +355,16 @@ function knowledge() {
     result.replaceChildren(section('Imported document', fields(record, {id: 'Document ID', title: 'Title', kind: 'Kind', importedAt: 'Imported at'})));
   }); content.append(form, result);
 }
+function highlight(view) {
+  for (const control of navigation.querySelectorAll('[data-view]')) {
+    if (control.dataset.view === view) control.setAttribute('aria-current', 'page'); else control.removeAttribute('aria-current');
+  }
+}
 async function navigate(view) {
   const version = ++generation;
   message();
   if (!actor) return;
-  for (const control of navigation.querySelectorAll('[data-view]')) {
-    if (control.dataset.view === view) control.setAttribute('aria-current', 'page'); else control.removeAttribute('aria-current');
-  }
+  highlight(view);
   content.replaceChildren(el('p', 'Loading…'));
   try {
     if (view === 'dashboard') await overview(version);

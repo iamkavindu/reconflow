@@ -43,7 +43,8 @@ Access tokens exist only in JavaScript memory. Session storage holds only the
 pending code verifier/state during redirect and is cleared before code exchange.
 Refreshing the page or signing out clears the workspace session. Sign in again
 to start a new session; the identity provider's separate SSO session is not
-revoked by local sign-out. Tokens and passwords are never placed in UI URLs or
+revoked by local sign-out. To change accounts on a re-authentication screen,
+use Keycloak’s restart-login control next to the remembered username. Tokens and passwords are never placed in UI URLs or
 persistent browser storage. All business text is rendered as text, never HTML.
 
 Use HTTPS for hosted application and issuer URLs. Localhost HTTP is supported

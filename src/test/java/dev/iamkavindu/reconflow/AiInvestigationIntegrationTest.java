@@ -62,6 +62,7 @@ import tools.jackson.databind.json.JsonMapper;
             "reconflow.security.enabled=false",
             "reconflow.ai.enabled=true",
             "reconflow.ai.model=contract-test",
+            "reconflow.ai.request-timeout=PT45S",
             "reconflow.ai.api-key=fake-model-key",
             "reconflow.ai.typesafe-api-key=fake-judge-key",
             "reconflow.reconciliation.scheduling-enabled=false"
@@ -128,6 +129,14 @@ class AiInvestigationIntegrationTest {
     @Test
     void keepsFinancialEventExecutionSeparateFromModelCalls() {
         assertThat(context.getBean("applicationTaskExecutor")).isNotSameAs(context.getBean("investigationExecutor"));
+    }
+
+    @Test
+    void acceptsAModelResponseBeyondTheFormerFifteenSecondTimeout() {
+        MODELS.mode = Mode.SLOW_RESPONSE;
+        var original = exception();
+        var result = engine.investigate(TENANT, original.caseId());
+        assertThat(result.judgment().accepted()).isTrue();
     }
 
     @Test
@@ -244,6 +253,7 @@ class AiInvestigationIntegrationTest {
 
     enum Mode {
         SUCCESS,
+        SLOW_RESPONSE,
         REFINE,
         FABRICATED,
         ILLEGAL_WRITE,
@@ -278,6 +288,10 @@ class AiInvestigationIntegrationTest {
         void handle(HttpExchange exchange) throws IOException {
             JsonNode input = json.readTree(exchange.getRequestBody());
             if (input.has("messages")) {
+                if (!"45".equals(exchange.getRequestHeaders().getFirst("X-Stainless-Timeout"))) {
+                    respond(exchange, 400, "{\"error\":\"Configured request timeout was not propagated\"}");
+                    return;
+                }
                 if (input.has("max_tokens")
                         || !input.has("max_completion_tokens")
                         || input.get("max_completion_tokens").asInt() != 2000) {
@@ -290,6 +304,15 @@ class AiInvestigationIntegrationTest {
                     }
                 }
                 int call = chatCalls.incrementAndGet();
+                if (mode == Mode.SLOW_RESPONSE && call == 1) {
+                    try {
+                        Thread.sleep(Duration.ofSeconds(16));
+                    } catch (InterruptedException error) {
+                        Thread.currentThread().interrupt();
+                        respond(exchange, 503, "{\"error\":\"Fixture interrupted\"}");
+                        return;
+                    }
+                }
                 if (mode == Mode.ILLEGAL_WRITE) {
                     respond(exchange, 200, chat(null, "resolveCase"));
                 } else if ((mode == Mode.SUCCESS || mode == Mode.REFINE) && call == 1) {

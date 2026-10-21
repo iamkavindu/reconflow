@@ -13,6 +13,15 @@ for explicitly composed environments. Configure `AI_MODEL`, `AI_API_KEY`, and
 endpoints. Credentials belong in environment variables. With execution disabled,
 requesting an investigation returns `503 Service Unavailable`.
 
+Chat requests use a 60-second timeout by default. Set `AI_REQUEST_TIMEOUT` in
+the application process environment to a positive ISO-8601 duration up to `PT2M`
+to accommodate the configured model. Retries remain disabled. This is a timeout
+for each model call, including retrieval query rewriting and expansion, rather
+than the whole investigation. Embedding and TypeSafe requests retain their
+separate timeouts. If the demo runner stops waiting while an investigation is
+still running, increase its polling budget, for example
+`python3 dev/demo.py --investigate --investigation-timeout 600`.
+
 The worker gathers immutable financial evidence through public read ports and
 exposes only case-bound read tools. Tenant and resource identities are fixed by
 the application, never supplied by the model. The adapter uses bounded model and

@@ -212,11 +212,12 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
             }
             messages.add(response.getResult().getOutput());
             String feedback = verdict.feedback();
-            messages.add(new UserMessage("Refine once using only supplied evidence. Check every explanation against its "
-                    + "specific cited record; attribute fees to settlement evidence. Search policy and provider "
-                    + "documentation if fee terms are needed. Use null for suggestedResolution when only further "
-                    + "review is supported, and state that the case remains unchanged. Judgment feedback: "
-                    + feedback.substring(0, Math.min(2000, feedback.length()))));
+            messages.add(
+                    new UserMessage("Refine once using only supplied evidence. Check every explanation against its "
+                            + "specific cited record; attribute fees to settlement evidence. Search policy and provider "
+                            + "documentation if fee terms are needed. Use null for suggestedResolution when only further "
+                            + "review is supported, and state that the case remains unchanged. Judgment feedback: "
+                            + feedback.substring(0, Math.min(2000, feedback.length()))));
         }
         throw new IllegalStateException("investigation exceeded its model-call budget");
     }

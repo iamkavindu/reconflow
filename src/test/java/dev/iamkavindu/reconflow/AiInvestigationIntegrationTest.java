@@ -128,7 +128,8 @@ class AiInvestigationIntegrationTest {
         assertThat(result.judgment().accepted()).isTrue();
         assertThat(result.evidence().getFirst().reference()).isEqualTo(MODELS.reference);
         assertThat(engine.promptVersion()).isEqualTo("reconflow-investigation-v2");
-        String instructions = MODELS.chatRequests.getFirst()
+        String instructions = MODELS.chatRequests
+                .getFirst()
                 .get("messages")
                 .get(0)
                 .get("content")

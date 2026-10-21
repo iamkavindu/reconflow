@@ -14,7 +14,17 @@ class AiModelConfigurationTest {
         var configuration = new AiModelConfiguration();
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> configuration.investigationChatModel(
-                        "contract-test", "fake-key", "http://127.0.0.1", Duration.parse(timeout)))
+                        "contract-test", "fake-key", "http://127.0.0.1", Duration.parse(timeout), 8192))
                 .withMessage("AI request timeout must be positive and at most two minutes");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 32769})
+    void rejectsUnboundedOrNonPositiveCompletionBudgets(int budget) {
+        var configuration = new AiModelConfiguration();
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> configuration.investigationChatModel(
+                        "contract-test", "fake-key", "http://127.0.0.1", Duration.ofSeconds(60), budget))
+                .withMessage("AI completion token budget must be between 1 and 32768");
     }
 }

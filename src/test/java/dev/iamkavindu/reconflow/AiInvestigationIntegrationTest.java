@@ -63,6 +63,7 @@ import tools.jackson.databind.json.JsonMapper;
             "reconflow.ai.enabled=true",
             "reconflow.ai.model=contract-test",
             "reconflow.ai.request-timeout=PT45S",
+            "reconflow.ai.max-completion-tokens=4096",
             "reconflow.ai.api-key=fake-model-key",
             "reconflow.ai.typesafe-api-key=fake-judge-key",
             "reconflow.reconciliation.scheduling-enabled=false"
@@ -171,6 +172,18 @@ class AiInvestigationIntegrationTest {
     }
 
     @Test
+    void retainsTruncationAsAFailedAttemptWithoutRefiningOrJudgingIncompleteOutput() {
+        MODELS.mode = Mode.TRUNCATED;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(completed.result()).isNull();
+        assertThat(MODELS.chatCalls).hasValue(1);
+        assertThat(MODELS.judgeCalls).hasValue(0);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    @Test
     void neverExposesARequestedCaseWriteTool() {
         MODELS.mode = Mode.ILLEGAL_WRITE;
         var original = exception();
@@ -254,6 +267,7 @@ class AiInvestigationIntegrationTest {
     enum Mode {
         SUCCESS,
         SLOW_RESPONSE,
+        TRUNCATED,
         REFINE,
         FABRICATED,
         ILLEGAL_WRITE,
@@ -294,7 +308,7 @@ class AiInvestigationIntegrationTest {
                 }
                 if (input.has("max_tokens")
                         || !input.has("max_completion_tokens")
-                        || input.get("max_completion_tokens").asInt() != 2000) {
+                        || input.get("max_completion_tokens").asInt() != 4096) {
                     respond(exchange, 400, "{\"error\":\"Use a bounded max_completion_tokens budget\"}");
                     return;
                 }
@@ -304,6 +318,10 @@ class AiInvestigationIntegrationTest {
                     }
                 }
                 int call = chatCalls.incrementAndGet();
+                if (mode == Mode.TRUNCATED) {
+                    respond(exchange, 200, chat("", null, "length"));
+                    return;
+                }
                 if (mode == Mode.SLOW_RESPONSE && call == 1) {
                     try {
                         Thread.sleep(Duration.ofSeconds(16));
@@ -359,6 +377,10 @@ class AiInvestigationIntegrationTest {
         }
 
         String chat(String content, String tool) {
+            return chat(content, tool, tool == null ? "stop" : "tool_calls");
+        }
+
+        String chat(String content, String tool, String finishReason) {
             Map<String, Object> message = new java.util.LinkedHashMap<>();
             message.put("role", "assistant");
             message.put("content", content);
@@ -383,8 +405,7 @@ class AiInvestigationIntegrationTest {
                     "model",
                     "contract-test",
                     "choices",
-                    List.of(Map.of(
-                            "index", 0, "message", message, "finish_reason", tool == null ? "stop" : "tool_calls")),
+                    List.of(Map.of("index", 0, "message", message, "finish_reason", finishReason)),
                     "usage",
                     Map.of("prompt_tokens", 10, "completion_tokens", 10, "total_tokens", 20)));
         }

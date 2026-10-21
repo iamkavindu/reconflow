@@ -22,6 +22,14 @@ separate timeouts. If the demo runner stops waiting while an investigation is
 still running, increase its polling budget, for example
 `python3 dev/demo.py --investigate --investigation-timeout 600`.
 
+`AI_MAX_COMPLETION_TOKENS` controls the per-chat-request completion budget
+(default `8192`, allowed range `1`–`32768`). Reasoning tokens count toward this
+budget along with the visible answer. A `LENGTH` finish reason means the budget
+was exhausted, even if the visible answer is empty. The worker fails that attempt
+without parsing, judging or refining the incomplete response, and logs a bounded
+diagnostic without the model's text. Adjust the budget and request a new
+investigation. Output size, evidence validation and judgment remain enforced.
+
 The worker gathers immutable financial evidence through public read ports and
 exposes only case-bound read tools. Tenant and resource identities are fixed by
 the application, never supplied by the model. The adapter uses bounded model and

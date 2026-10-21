@@ -75,6 +75,7 @@ judgment, screening and ranking. Keys remain in the process environment.
 | `AI_API_KEY`, `TYPESAFE_API_KEY` | Required when local AI is enabled |
 | `AI_BASE_URL` | `https://api.openai.com/v1`; optional compatible endpoint override |
 | `AI_REQUEST_TIMEOUT` | `PT60S` per chat request; must be positive and at most `PT2M` |
+| `AI_MAX_COMPLETION_TOKENS` | `8192` per chat request, including reasoning and visible output; integer from 1 to 32768 |
 | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai`; optional compatible endpoint override |
 | `MANAGEMENT_PORT` | `9091`, through the shared observability preset |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `http://localhost:4318/v1/traces`, through the shared observability preset |

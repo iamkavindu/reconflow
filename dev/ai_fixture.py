@@ -19,7 +19,7 @@ def respond(path, body):
                 'data': [{'object': 'embedding', 'index': i, 'embedding': [1.0] + [0.0] * 1535}
                          for i, _ in enumerate(inputs)], 'usage': {'prompt_tokens': 1, 'total_tokens': 1}}
     if path == '/v1/chat/completions':
-        if 'max_tokens' in body or body.get('max_completion_tokens') != 2000:
+        if 'max_tokens' in body or body.get('max_completion_tokens') != 8192:
             raise ValueError('Use a bounded max_completion_tokens budget')
         text = json.dumps(body['messages'])
         if body.get('tools'):

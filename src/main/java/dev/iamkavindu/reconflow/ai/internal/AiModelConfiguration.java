@@ -22,12 +22,16 @@ class AiModelConfiguration {
             @Value("${reconflow.ai.model}") String model,
             @Value("${reconflow.ai.api-key}") String apiKey,
             @Value("${reconflow.ai.base-url:https://api.openai.com/v1}") String baseUrl,
-            @Value("${reconflow.ai.request-timeout:PT60S}") Duration requestTimeout) {
+            @Value("${reconflow.ai.request-timeout:PT60S}") Duration requestTimeout,
+            @Value("${reconflow.ai.max-completion-tokens:8192}") int maxCompletionTokens) {
         if (model.isBlank() || model.length() > 200 || apiKey.isBlank()) {
             throw new IllegalArgumentException("AI execution requires a bounded model name and an API key");
         }
         if (requestTimeout.compareTo(Duration.ZERO) <= 0 || requestTimeout.compareTo(Duration.ofMinutes(2)) > 0) {
             throw new IllegalArgumentException("AI request timeout must be positive and at most two minutes");
+        }
+        if (maxCompletionTokens < 1 || maxCompletionTokens > 32768) {
+            throw new IllegalArgumentException("AI completion token budget must be between 1 and 32768");
         }
         var options = OpenAiChatOptions.builder()
                 .model(model)
@@ -35,7 +39,7 @@ class AiModelConfiguration {
                 .baseUrl(baseUrl)
                 .timeout(requestTimeout)
                 .maxRetries(0)
-                .maxCompletionTokens(2000)
+                .maxCompletionTokens(maxCompletionTokens)
                 .build();
         return OpenAiChatModel.builder().options(options).build();
     }

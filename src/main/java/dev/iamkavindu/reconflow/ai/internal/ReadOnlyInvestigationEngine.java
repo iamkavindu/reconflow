@@ -18,6 +18,8 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.springaicommunity.typesafe.judge.JevJudge;
 import org.springaicommunity.typesafe.judge.JevJudgeInput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -36,6 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnProperty(name = "reconflow.ai.enabled", havingValue = "true")
 class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyInvestigationEngine.class);
     private static final String PROMPT_VERSION = "reconflow-investigation-v1";
     private static final String QUESTION =
             "Explain this reconciliation exception and recommend evidence-based human review.";
@@ -122,6 +125,12 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         while (rounds++ < 8) {
             var prompt = new Prompt(messages, options);
             var response = model.call(prompt);
+            if ("length".equalsIgnoreCase(response.getResult().getMetadata().getFinishReason())) {
+                LOG.warn(
+                        "Investigation for case {} exhausted its completion-token budget; adjust AI_MAX_COMPLETION_TOKENS",
+                        caseId.value());
+                throw new IllegalStateException("investigation model exhausted its completion-token budget");
+            }
             if (response.hasToolCalls()) {
                 toolCalls += response.getResults().stream()
                         .mapToInt(value -> value.getOutput().getToolCalls().size())

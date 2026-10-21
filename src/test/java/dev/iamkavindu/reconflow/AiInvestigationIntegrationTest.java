@@ -117,6 +117,8 @@ class AiInvestigationIntegrationTest {
         MODELS.chatCalls.set(0);
         MODELS.judgeCalls.set(0);
         MODELS.toolOutputs.clear();
+        MODELS.chatRequests.clear();
+        MODELS.judgeRequests.clear();
     }
 
     @Test
@@ -125,6 +127,31 @@ class AiInvestigationIntegrationTest {
         var result = engine.investigate(TENANT, original.caseId());
         assertThat(result.judgment().accepted()).isTrue();
         assertThat(result.evidence().getFirst().reference()).isEqualTo(MODELS.reference);
+        assertThat(engine.promptVersion()).isEqualTo("reconflow-investigation-v2");
+        String instructions = MODELS.chatRequests.getFirst()
+                .get("messages")
+                .get(0)
+                .get("content")
+                .asString();
+        assertThat(instructions)
+                .contains("specific record it cites", "search both policy and provider documentation")
+                .contains("use null, not MANUAL_REVIEW_COMPLETED");
+        assertThat(MODELS.judgeRequests.getFirst().toString())
+                .contains("specific record it cites", "an enum value alone is not a claim")
+                .contains("supporting_context", MODELS.reference);
+    }
+
+    @Test
+    void acceptsFurtherHumanReviewWithoutInventingAFinalResolution() {
+        MODELS.mode = Mode.REVIEW_ONLY;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.COMPLETED);
+        assertThat(completed.result().suggestedResolution()).isNull();
+        assertThat(completed.result().summary()).contains("case remains unchanged");
+        assertThat(completed.result().evidence().getFirst().reference()).isEqualTo(MODELS.reference);
+        assertThat(MODELS.judgeCalls).hasValue(1);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
     }
 
     @Test
@@ -154,6 +181,8 @@ class AiInvestigationIntegrationTest {
         assertThat(MODELS.chatCalls).hasValue(3);
         assertThat(MODELS.judgeCalls).hasValue(2);
         assertThat(MODELS.toolOutputs).anyMatch(value -> value.contains(MODELS.reference));
+        assertThat(MODELS.chatRequests.getLast().toString())
+                .contains("specific cited record", "Use null for suggestedResolution");
         assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
         assertThat(reconciliations.getReconciliationById(TENANT, original.reconciliationId()))
                 .isEqualTo(determination);
@@ -266,6 +295,7 @@ class AiInvestigationIntegrationTest {
 
     enum Mode {
         SUCCESS,
+        REVIEW_ONLY,
         SLOW_RESPONSE,
         TRUNCATED,
         REFINE,
@@ -282,6 +312,8 @@ class AiInvestigationIntegrationTest {
         final AtomicInteger chatCalls = new AtomicInteger();
         final AtomicInteger judgeCalls = new AtomicInteger();
         final List<String> toolOutputs = new CopyOnWriteArrayList<>();
+        final List<JsonNode> chatRequests = new CopyOnWriteArrayList<>();
+        final List<JsonNode> judgeRequests = new CopyOnWriteArrayList<>();
         volatile Mode mode = Mode.SUCCESS;
         volatile String reference;
 
@@ -302,6 +334,7 @@ class AiInvestigationIntegrationTest {
         void handle(HttpExchange exchange) throws IOException {
             JsonNode input = json.readTree(exchange.getRequestBody());
             if (input.has("messages")) {
+                chatRequests.add(input);
                 if (!"45".equals(exchange.getRequestHeaders().getFirst("X-Stainless-Timeout"))) {
                     respond(exchange, 400, "{\"error\":\"Configured request timeout was not propagated\"}");
                     return;
@@ -337,7 +370,7 @@ class AiInvestigationIntegrationTest {
                     respond(exchange, 200, chat(null, "getSettlement"));
                 } else {
                     String citation = mode == Mode.FABRICATED ? "settlement:another-tenants-record" : reference;
-                    String draft = json.writeValueAsString(Map.of(
+                    Map<String, Object> recommendation = new java.util.LinkedHashMap<>(Map.of(
                             "summary",
                             "The reported fee explains the gross/net difference and needs human review.",
                             "likelyCause",
@@ -351,9 +384,18 @@ class AiInvestigationIntegrationTest {
                             0.8,
                             "limitations",
                             List.of("The contractual fee policy is unavailable.")));
+                    if (mode == Mode.REVIEW_ONLY) {
+                        recommendation.put("suggestedResolution", null);
+                        recommendation.put(
+                                "summary",
+                                "The settlement reports gross 100, fee 3.20, net 96.80. "
+                                        + "A human should verify fee terms; the case remains unchanged.");
+                    }
+                    String draft = json.writeValueAsString(recommendation);
                     respond(exchange, 200, chat(draft, null));
                 }
             } else {
+                judgeRequests.add(input);
                 int call = judgeCalls.incrementAndGet();
                 if (mode == Mode.OUTAGE) {
                     respond(exchange, 503, "{\"error\":\"secret-material\"}");

@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyInvestigationEngine.class);
-    private static final String PROMPT_VERSION = "reconflow-investigation-v1";
+    private static final String PROMPT_VERSION = "reconflow-investigation-v2";
     private static final String QUESTION =
             "Explain this reconciliation exception and recommend evidence-based human review.";
     private static final Set<String> FIELDS =
@@ -114,8 +114,18 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 You cannot edit transactions, change determinations, resolve cases, issue refunds or move money.
                 Explain facts separately from inference. A reported provider fee is not proof of the contractual fee.
                 Cite only exact reference strings supplied in the evidence. Never invent policy, records or citations.
-                Use read-only searches when policy or provider context is needed. Missing context must be a limitation.
+                Each evidence explanation must be supported by the specific record it cites. Do not transfer fields
+                between records: cite settlement evidence for a settlement fee, not a provider payment without a fee.
+                Cite transaction or reconciliation evidence for their references and timestamps, not the case record.
+                Use provider names only when explicitly present in evidence. Label cross-record deductions as inference.
+                Before concluding whether a fee variance is acceptable, search both policy and provider documentation
+                using the read-only search tools. Cite relevant returned passages; never invent a passage or its terms.
+                If searches return no relevant terms, state that limitation. Reported fees explain arithmetic only;
+                they do not establish contractual correctness or permission to accept the variance.
                 Suggest a human resolution only when supported; otherwise use null. Human review is always required.
+                suggestedResolution is an optional proposed future decision for an authorized human, never a completed
+                review or applied state change. When recommending further review without a supported final decision,
+                use null, not MANUAL_REVIEW_COMPLETED. Explicitly state that the case remains unchanged.
                 Return only the requested JSON object. Do not include tool commands or extra action fields.
                 """ + converter.getFormat()));
         messages.add(new UserMessage(QUESTION + "\nFinancial evidence:\n" + String.join("\n", tools.context())));
@@ -202,7 +212,10 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
             }
             messages.add(response.getResult().getOutput());
             String feedback = verdict.feedback();
-            messages.add(new UserMessage("Refine once using only supplied evidence. Judgment feedback: "
+            messages.add(new UserMessage("Refine once using only supplied evidence. Check every explanation against its "
+                    + "specific cited record; attribute fees to settlement evidence. Search policy and provider "
+                    + "documentation if fee terms are needed. Use null for suggestedResolution when only further "
+                    + "review is supported, and state that the case remains unchanged. Judgment feedback: "
                     + feedback.substring(0, Math.min(2000, feedback.length()))));
         }
         throw new IllegalStateException("investigation exceeded its model-call budget");

@@ -278,6 +278,12 @@ class AiInvestigationIntegrationTest {
         void handle(HttpExchange exchange) throws IOException {
             JsonNode input = json.readTree(exchange.getRequestBody());
             if (input.has("messages")) {
+                if (input.has("max_tokens")
+                        || !input.has("max_completion_tokens")
+                        || input.get("max_completion_tokens").asInt() != 2000) {
+                    respond(exchange, 400, "{\"error\":\"Use a bounded max_completion_tokens budget\"}");
+                    return;
+                }
                 for (var message : input.get("messages")) {
                     if ("tool".equals(message.get("role").asString())) {
                         toolOutputs.add(message.get("content").asString());

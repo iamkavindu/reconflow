@@ -31,7 +31,7 @@ class AiModelConfiguration {
                 .baseUrl(baseUrl)
                 .timeout(Duration.ofSeconds(15))
                 .maxRetries(0)
-                .maxTokens(2000)
+                .maxCompletionTokens(2000)
                 .build();
         return OpenAiChatModel.builder().options(options).build();
     }

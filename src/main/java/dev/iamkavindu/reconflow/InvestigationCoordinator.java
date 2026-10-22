@@ -47,21 +47,32 @@ class InvestigationCoordinator {
                     .addKeyValue("tenant_id", event.tenantId().value())
                     .addKeyValue("workflow_stage", failure == null ? "COMPLETION" : failure.stage())
                     .addKeyValue("error_category", failure == null ? "WORKFLOW_FAILURE" : failure.category())
-                    .addKeyValue("exception_class", failure == null ? error.getClass().getName() : failure.exceptionClass())
-                    .addKeyValue("cause_class", failure == null ? error.getClass().getName() : failure.causeClass())
-                    .addKeyValue("request_timeout", failure == null || failure.requestTimeout() == null
-                            ? "dependency-specific" : failure.requestTimeout())
-                    .addKeyValue("elapsed_ms", failure == null ? (System.nanoTime() - started) / 1_000_000 : failure.elapsedMs())
+                    .addKeyValue(
+                            "exception_class",
+                            failure == null ? error.getClass().getName() : failure.exceptionClass())
+                    .addKeyValue(
+                            "cause_class", failure == null ? error.getClass().getName() : failure.causeClass())
+                    .addKeyValue(
+                            "request_timeout",
+                            failure == null || failure.requestTimeout() == null
+                                    ? "dependency-specific"
+                                    : failure.requestTimeout())
+                    .addKeyValue(
+                            "elapsed_ms",
+                            failure == null ? (System.nanoTime() - started) / 1_000_000 : failure.elapsedMs())
                     .addKeyValue("total_elapsed_ms", (System.nanoTime() - started) / 1_000_000)
                     .addKeyValue("model", engine.model())
-                    .log("Investigation {} failed workflow_stage={} error_category={} exception_class={} "
+                    .log(
+                            "Investigation {} failed workflow_stage={} error_category={} exception_class={} "
                                     + "cause_class={} request_timeout={} elapsed_ms={} model={}",
                             event.investigationId().value(),
                             failure == null ? "COMPLETION" : failure.stage(),
                             failure == null ? "WORKFLOW_FAILURE" : failure.category(),
                             failure == null ? error.getClass().getName() : failure.exceptionClass(),
                             failure == null ? error.getClass().getName() : failure.causeClass(),
-                            failure == null || failure.requestTimeout() == null ? "dependency-specific" : failure.requestTimeout(),
+                            failure == null || failure.requestTimeout() == null
+                                    ? "dependency-specific"
+                                    : failure.requestTimeout(),
                             failure == null ? (System.nanoTime() - started) / 1_000_000 : failure.elapsedMs(),
                             engine.model());
             processing.fail(

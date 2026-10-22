@@ -232,8 +232,8 @@ class InvestigationReadTools {
                 .map(value -> value.type().name())
                 .distinct()
                 .collect(java.util.stream.Collectors.joining(" "));
-        String query = "Reconciliation human review policy and provider documentation for "
-                + discrepancies + " " + providers + " gross net settlement fees and record errors";
+        String query = "Reconciliation human review policy and provider documentation for " + discrepancies + " "
+                + providers + " gross net settlement fees and record errors";
         query = query.substring(0, Math.min(1000, query.length()));
         searchPolicies(query);
         searchProviderDocumentation(query);
@@ -243,8 +243,7 @@ class InvestigationReadTools {
         var applicable = documentationReferences.values().stream()
                 .flatMap(Set::stream)
                 .collect(java.util.stream.Collectors.toSet());
-        if (!applicable.isEmpty()
-                && evidence.stream().noneMatch(value -> applicable.contains(value.reference()))) {
+        if (!applicable.isEmpty() && evidence.stream().noneMatch(value -> applicable.contains(value.reference()))) {
             return "Relevant documentation was supplied, but the recommendation does not cite it. "
                     + "Cite an exact supplied policy or provider documentation reference and explain what that "
                     + "passage supports. Do not invent references or contractual terms.";
@@ -271,7 +270,8 @@ class InvestigationReadTools {
             if (kind != KnowledgeKind.PAST_CASE) {
                 documentationReferences.put(
                         kind,
-                        results.stream().map(KnowledgeEvidence::reference)
+                        results.stream()
+                                .map(KnowledgeEvidence::reference)
                                 .collect(java.util.stream.Collectors.toSet()));
             }
             hasPolicyEvidence |= !results.isEmpty() && kind != KnowledgeKind.PAST_CASE;

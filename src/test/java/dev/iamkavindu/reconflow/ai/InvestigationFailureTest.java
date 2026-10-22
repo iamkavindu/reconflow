@@ -15,7 +15,8 @@ class InvestigationFailureTest {
         progress.stage(InvestigationFailure.Stage.GENERATION);
         var timeout = new InterruptedIOException("secret-provider-message");
         timeout.initCause(new IOException("Canceled"));
-        var failure = new InvestigationFailure(new RuntimeException("secret-key", timeout), progress, Duration.ofSeconds(120));
+        var failure = new InvestigationFailure(
+                new RuntimeException("secret-key", timeout), progress, Duration.ofSeconds(120));
         assertThat(failure.category()).isEqualTo("TIMEOUT");
         assertThat(failure.stage()).isEqualTo(InvestigationFailure.Stage.GENERATION);
         assertThat(failure.causeClass()).isEqualTo(IOException.class.getName());

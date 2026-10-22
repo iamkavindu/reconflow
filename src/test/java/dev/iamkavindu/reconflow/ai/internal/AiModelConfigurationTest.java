@@ -22,8 +22,8 @@ class AiModelConfigurationTest {
     @ValueSource(strings = {"PT0S", "-PT1S", "PT2M0.001S"})
     void rejectsUnboundedOrNonPositiveTypeSafeTimeouts(String timeout) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new AiModelConfiguration().typeSafeClient(
-                        "fake-key", "http://127.0.0.1", Duration.parse(timeout)))
+                .isThrownBy(() -> new AiModelConfiguration()
+                        .typeSafeClient("fake-key", "http://127.0.0.1", Duration.parse(timeout)))
                 .withMessage("TypeSafe request timeout must be positive and at most two minutes");
     }
 

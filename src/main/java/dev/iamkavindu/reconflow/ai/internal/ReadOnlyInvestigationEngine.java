@@ -111,11 +111,12 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         try {
             return investigate(tenantId, caseId, progress);
         } catch (RuntimeException error) {
-            Duration timeout = switch (progress.currentStage()) {
-                case GENERATION -> requestTimeout;
-                case JUDGMENT -> judgmentTimeout;
-                default -> null;
-            };
+            Duration timeout =
+                    switch (progress.currentStage()) {
+                        case GENERATION -> requestTimeout;
+                        case JUDGMENT -> judgmentTimeout;
+                        default -> null;
+                    };
             throw new InvestigationFailure(error, progress, timeout);
         }
     }

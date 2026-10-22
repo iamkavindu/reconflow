@@ -163,8 +163,11 @@ class AiInvestigationIntegrationTest {
     private void supplyDocumentation() {
         when(knowledge.search(eq(TENANT), eq(KnowledgeKind.POLICY), any()))
                 .thenReturn(List.of(new KnowledgeEvidence(
-                        "document-chunk:policy-fixture", "Fee review", "Reported fees require human review.",
-                        "INCLUDED", 0.95)));
+                        "document-chunk:policy-fixture",
+                        "Fee review",
+                        "Reported fees require human review.",
+                        "INCLUDED",
+                        0.95)));
     }
 
     @Test
@@ -175,7 +178,8 @@ class AiInvestigationIntegrationTest {
         var completed = execute(original);
         assertThat(completed.status()).isEqualTo(InvestigationStatus.COMPLETED);
         assertThat(completed.result().judgment().refinementAttempts()).isEqualTo(1);
-        assertThat(completed.result().evidence()).anyMatch(value -> value.reference().equals("document-chunk:policy-fixture"));
+        assertThat(completed.result().evidence())
+                .anyMatch(value -> value.reference().equals("document-chunk:policy-fixture"));
         assertThat(MODELS.chatCalls).hasValue(2);
         assertThat(MODELS.judgeCalls).hasValue(1);
         assertThat(MODELS.chatRequests.getFirst().toString()).contains("document-chunk:policy-fixture");
@@ -315,7 +319,8 @@ class AiInvestigationIntegrationTest {
         assertThat(completed.failureReason()).doesNotContain("secret-material", "fake-judge-key");
         assertThat(MODELS.judgeCalls).hasValue(1);
         assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
-        assertThat(output.getAll()).contains("workflow_stage=JUDGMENT", "error_category=", "cause_class=", "elapsed_ms=");
+        assertThat(output.getAll())
+                .contains("workflow_stage=JUDGMENT", "error_category=", "cause_class=", "elapsed_ms=");
         assertThat(output.getAll()).doesNotContain("secret-material", "fake-judge-key");
     }
 
@@ -470,11 +475,18 @@ class AiInvestigationIntegrationTest {
                                         + "A human should verify fee terms; the case remains unchanged.");
                     }
                     if (mode == Mode.DOCUMENT_UNKNOWN) {
-                        recommendation.put("evidence", List.of(Map.of(
-                                "reference", "document-chunk:unavailable", "explanation", "Invented policy")));
+                        recommendation.put(
+                                "evidence",
+                                List.of(Map.of(
+                                        "reference", "document-chunk:unavailable", "explanation", "Invented policy")));
                     } else if ((mode == Mode.DOCUMENT_REFINE || mode == Mode.DOCUMENT_JUDGE_REJECT) && call > 1) {
-                        recommendation.put("evidence", List.of(Map.of(
-                                "reference", "document-chunk:policy-fixture", "explanation", "Reported fees require human review.")));
+                        recommendation.put(
+                                "evidence",
+                                List.of(Map.of(
+                                        "reference",
+                                        "document-chunk:policy-fixture",
+                                        "explanation",
+                                        "Reported fees require human review.")));
                         recommendation.put("suggestedResolution", null);
                     }
                     String draft = json.writeValueAsString(recommendation);
@@ -487,8 +499,10 @@ class AiInvestigationIntegrationTest {
                     respond(exchange, 503, "{\"error\":\"secret-material\"}");
                     return;
                 }
-                double groundedness = mode == Mode.REJECT || mode == Mode.DOCUMENT_JUDGE_REJECT
-                        || (mode == Mode.REFINE && call == 1) ? 0.1 : 0.95;
+                double groundedness =
+                        mode == Mode.REJECT || mode == Mode.DOCUMENT_JUDGE_REJECT || (mode == Mode.REFINE && call == 1)
+                                ? 0.1
+                                : 0.95;
                 respond(
                         exchange,
                         200,

@@ -47,11 +47,15 @@ class AiModelConfiguration {
     @Bean
     TypeSafeClient typeSafeClient(
             @Value("${reconflow.ai.typesafe-api-key}") String apiKey,
-            @Value("${reconflow.ai.typesafe-base-url:https://api.typesafe.ai}") String baseUrl) {
+            @Value("${reconflow.ai.typesafe-base-url:https://api.typesafe.ai}") String baseUrl,
+            @Value("${reconflow.ai.typesafe-request-timeout:PT60S}") Duration requestTimeout) {
+        if (requestTimeout.compareTo(Duration.ZERO) <= 0 || requestTimeout.compareTo(Duration.ofMinutes(2)) > 0) {
+            throw new IllegalArgumentException("TypeSafe request timeout must be positive and at most two minutes");
+        }
         return TypeSafeClient.builder()
                 .apiKey(apiKey)
                 .baseUrl(baseUrl)
-                .timeout(Duration.ofSeconds(10))
+                .timeout(requestTimeout)
                 .retryPolicy(RetryPolicy.noRetry())
                 .build();
     }

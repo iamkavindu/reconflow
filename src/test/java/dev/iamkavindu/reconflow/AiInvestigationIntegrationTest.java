@@ -2,10 +2,17 @@ package dev.iamkavindu.reconflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.iamkavindu.reconflow.ai.InvestigationEngine;
+import dev.iamkavindu.reconflow.ai.KnowledgeEvidence;
+import dev.iamkavindu.reconflow.ai.KnowledgeKind;
+import dev.iamkavindu.reconflow.ai.KnowledgeSearch;
 import dev.iamkavindu.reconflow.cases.CaseQueries;
 import dev.iamkavindu.reconflow.cases.CaseView;
 import dev.iamkavindu.reconflow.cases.InvestigationCommands;
@@ -43,19 +50,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Import({TestcontainersConfiguration.class, AiInvestigationIntegrationTest.ActorConfiguration.class})
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(
         properties = {
             "reconflow.kafka.enabled=false",
@@ -111,8 +123,12 @@ class AiInvestigationIntegrationTest {
     @Autowired
     InvestigationEngine engine;
 
+    @MockitoBean
+    KnowledgeSearch knowledge;
+
     @BeforeEach
     void resetModels() {
+        when(knowledge.search(any(), any(), any())).thenReturn(List.of());
         MODELS.mode = Mode.SUCCESS;
         MODELS.chatCalls.set(0);
         MODELS.judgeCalls.set(0);
@@ -127,7 +143,7 @@ class AiInvestigationIntegrationTest {
         var result = engine.investigate(TENANT, original.caseId());
         assertThat(result.judgment().accepted()).isTrue();
         assertThat(result.evidence().getFirst().reference()).isEqualTo(MODELS.reference);
-        assertThat(engine.promptVersion()).isEqualTo("reconflow-investigation-v2");
+        assertThat(engine.promptVersion()).isEqualTo("reconflow-investigation-v3");
         String instructions = MODELS.chatRequests
                 .getFirst()
                 .get("messages")
@@ -140,6 +156,62 @@ class AiInvestigationIntegrationTest {
         assertThat(MODELS.judgeRequests.getFirst().toString())
                 .contains("specific record it cites", "an enum value alone is not a claim")
                 .contains("supporting_context", MODELS.reference);
+        verify(knowledge).search(eq(TENANT), eq(KnowledgeKind.POLICY), any());
+        verify(knowledge).search(eq(TENANT), eq(KnowledgeKind.PROVIDER_DOCUMENTATION), any());
+    }
+
+    private void supplyDocumentation() {
+        when(knowledge.search(eq(TENANT), eq(KnowledgeKind.POLICY), any()))
+                .thenReturn(List.of(new KnowledgeEvidence(
+                        "document-chunk:policy-fixture", "Fee review", "Reported fees require human review.",
+                        "INCLUDED", 0.95)));
+    }
+
+    @Test
+    void refinesMissingDocumentationBeforeJudgmentAndCompletesWithAnExactCitation() {
+        supplyDocumentation();
+        MODELS.mode = Mode.DOCUMENT_REFINE;
+        var original = exception();
+        var completed = execute(original);
+        assertThat(completed.status()).isEqualTo(InvestigationStatus.COMPLETED);
+        assertThat(completed.result().judgment().refinementAttempts()).isEqualTo(1);
+        assertThat(completed.result().evidence()).anyMatch(value -> value.reference().equals("document-chunk:policy-fixture"));
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(1);
+        assertThat(MODELS.chatRequests.getFirst().toString()).contains("document-chunk:policy-fixture");
+        assertThat(MODELS.chatRequests.getLast().toString()).contains("Relevant documentation was supplied");
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    @Test
+    void retainsFailureWhenSuppliedDocumentationRemainsUncited() {
+        supplyDocumentation();
+        var original = exception();
+        MODELS.mode = Mode.REVIEW_ONLY;
+        assertThat(execute(original).status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(0);
+        assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+    }
+
+    @Test
+    void rejectsUnknownDocumentationEvenWithTheExpectedPrefix() {
+        supplyDocumentation();
+        MODELS.mode = Mode.DOCUMENT_UNKNOWN;
+        var original = exception();
+        assertThat(execute(original).status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(0);
+    }
+
+    @Test
+    void citationAndJudgmentFailuresShareOneRefinementBudget() {
+        supplyDocumentation();
+        MODELS.mode = Mode.DOCUMENT_JUDGE_REJECT;
+        var original = exception();
+        assertThat(execute(original).status()).isEqualTo(InvestigationStatus.FAILED);
+        assertThat(MODELS.chatCalls).hasValue(2);
+        assertThat(MODELS.judgeCalls).hasValue(1);
     }
 
     @Test
@@ -234,7 +306,7 @@ class AiInvestigationIntegrationTest {
     }
 
     @Test
-    void judgeOutagesFailClosedWithoutPersistingProviderResponseDetails() {
+    void judgeOutagesFailClosedWithoutPersistingProviderResponseDetails(CapturedOutput output) {
         MODELS.mode = Mode.OUTAGE;
         var original = exception();
         var completed = execute(original);
@@ -243,6 +315,8 @@ class AiInvestigationIntegrationTest {
         assertThat(completed.failureReason()).doesNotContain("secret-material", "fake-judge-key");
         assertThat(MODELS.judgeCalls).hasValue(1);
         assertThat(cases.getCase(TENANT, original.caseId())).isEqualTo(original);
+        assertThat(output.getAll()).contains("workflow_stage=JUDGMENT", "error_category=", "cause_class=", "elapsed_ms=");
+        assertThat(output.getAll()).doesNotContain("secret-material", "fake-judge-key");
     }
 
     private InvestigationView execute(CaseView investigationCase) {
@@ -296,6 +370,9 @@ class AiInvestigationIntegrationTest {
 
     enum Mode {
         SUCCESS,
+        DOCUMENT_REFINE,
+        DOCUMENT_UNKNOWN,
+        DOCUMENT_JUDGE_REJECT,
         REVIEW_ONLY,
         SLOW_RESPONSE,
         TRUNCATED,
@@ -392,6 +469,14 @@ class AiInvestigationIntegrationTest {
                                 "The settlement reports gross 100, fee 3.20, net 96.80. "
                                         + "A human should verify fee terms; the case remains unchanged.");
                     }
+                    if (mode == Mode.DOCUMENT_UNKNOWN) {
+                        recommendation.put("evidence", List.of(Map.of(
+                                "reference", "document-chunk:unavailable", "explanation", "Invented policy")));
+                    } else if ((mode == Mode.DOCUMENT_REFINE || mode == Mode.DOCUMENT_JUDGE_REJECT) && call > 1) {
+                        recommendation.put("evidence", List.of(Map.of(
+                                "reference", "document-chunk:policy-fixture", "explanation", "Reported fees require human review.")));
+                        recommendation.put("suggestedResolution", null);
+                    }
                     String draft = json.writeValueAsString(recommendation);
                     respond(exchange, 200, chat(draft, null));
                 }
@@ -402,7 +487,8 @@ class AiInvestigationIntegrationTest {
                     respond(exchange, 503, "{\"error\":\"secret-material\"}");
                     return;
                 }
-                double groundedness = mode == Mode.REJECT || (mode == Mode.REFINE && call == 1) ? 0.1 : 0.95;
+                double groundedness = mode == Mode.REJECT || mode == Mode.DOCUMENT_JUDGE_REJECT
+                        || (mode == Mode.REFINE && call == 1) ? 0.1 : 0.95;
                 respond(
                         exchange,
                         200,

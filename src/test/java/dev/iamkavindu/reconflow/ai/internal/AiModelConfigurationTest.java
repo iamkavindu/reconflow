@@ -19,6 +19,15 @@ class AiModelConfigurationTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"PT0S", "-PT1S", "PT2M0.001S"})
+    void rejectsUnboundedOrNonPositiveTypeSafeTimeouts(String timeout) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new AiModelConfiguration().typeSafeClient(
+                        "fake-key", "http://127.0.0.1", Duration.parse(timeout)))
+                .withMessage("TypeSafe request timeout must be positive and at most two minutes");
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {0, -1, 32769})
     void rejectsUnboundedOrNonPositiveCompletionBudgets(int budget) {
         var configuration = new AiModelConfiguration();

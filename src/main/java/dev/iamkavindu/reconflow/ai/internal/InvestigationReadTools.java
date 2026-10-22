@@ -41,6 +41,7 @@ class InvestigationReadTools {
     private final JsonMapper json;
     private final Map<String, String> cache = new LinkedHashMap<>();
     private final Set<String> references = new LinkedHashSet<>();
+    private final Map<KnowledgeKind, Set<String>> documentationReferences = new LinkedHashMap<>();
     private final List<String> limitations = new ArrayList<>();
     private final List<ProviderTransactionId> providerIds;
     private boolean hasPolicyEvidence;
@@ -221,6 +222,36 @@ class InvestigationReadTools {
         return Set.copyOf(references);
     }
 
+    void retrieveDocumentation() {
+        String providers = providerRecords().stream()
+                .map(ProviderTransactionView::provider)
+                .distinct()
+                .limit(10)
+                .collect(java.util.stream.Collectors.joining(" "));
+        String discrepancies = reconciliation.discrepancies().stream()
+                .map(value -> value.type().name())
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(" "));
+        String query = "Reconciliation human review policy and provider documentation for "
+                + discrepancies + " " + providers + " gross net settlement fees and record errors";
+        query = query.substring(0, Math.min(1000, query.length()));
+        searchPolicies(query);
+        searchProviderDocumentation(query);
+    }
+
+    synchronized String citationFeedback(List<dev.iamkavindu.reconflow.cases.InvestigationEvidence> evidence) {
+        var applicable = documentationReferences.values().stream()
+                .flatMap(Set::stream)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!applicable.isEmpty()
+                && evidence.stream().noneMatch(value -> applicable.contains(value.reference()))) {
+            return "Relevant documentation was supplied, but the recommendation does not cite it. "
+                    + "Cite an exact supplied policy or provider documentation reference and explain what that "
+                    + "passage supports. Do not invent references or contractual terms.";
+        }
+        return null;
+    }
+
     synchronized List<String> limitations() {
         var result = new ArrayList<>(limitations);
         if (!hasPolicyEvidence) {
@@ -237,6 +268,12 @@ class InvestigationReadTools {
         return cached("knowledge:" + kind, () -> {
             List<KnowledgeEvidence> results = knowledge.search(tenantId, kind, query);
             results.forEach(result -> references.add(result.reference()));
+            if (kind != KnowledgeKind.PAST_CASE) {
+                documentationReferences.put(
+                        kind,
+                        results.stream().map(KnowledgeEvidence::reference)
+                                .collect(java.util.stream.Collectors.toSet()));
+            }
             hasPolicyEvidence |= !results.isEmpty() && kind != KnowledgeKind.PAST_CASE;
             return results;
         });

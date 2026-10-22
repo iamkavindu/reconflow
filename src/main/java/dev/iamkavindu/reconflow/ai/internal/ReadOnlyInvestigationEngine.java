@@ -1,6 +1,7 @@
 package dev.iamkavindu.reconflow.ai.internal;
 
 import dev.iamkavindu.reconflow.ai.InvestigationEngine;
+import dev.iamkavindu.reconflow.ai.InvestigationFailure;
 import dev.iamkavindu.reconflow.ai.KnowledgeSearch;
 import dev.iamkavindu.reconflow.cases.CaseId;
 import dev.iamkavindu.reconflow.cases.CaseQueries;
@@ -12,6 +13,7 @@ import dev.iamkavindu.reconflow.reconciliation.ReconciliationQueries;
 import dev.iamkavindu.reconflow.tenancy.TenantId;
 import dev.iamkavindu.reconflow.transactions.TransactionQueries;
 import jakarta.validation.Validator;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +41,7 @@ import tools.jackson.databind.json.JsonMapper;
 class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyInvestigationEngine.class);
-    private static final String PROMPT_VERSION = "reconflow-investigation-v2";
+    private static final String PROMPT_VERSION = "reconflow-investigation-v3";
     private static final String QUESTION =
             "Explain this reconciliation exception and recommend evidence-based human review.";
     private static final Set<String> FIELDS =
@@ -55,6 +57,8 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
     private final JsonMapper json;
     private final Validator validator;
     private final String modelName;
+    private final Duration requestTimeout;
+    private final Duration judgmentTimeout;
     private final ToolCallingManager toolManager = ToolCallingManager.builder().build();
 
     ReadOnlyInvestigationEngine(
@@ -68,7 +72,9 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
             KnowledgeSearch knowledge,
             JsonMapper json,
             Validator validator,
-            @Value("${reconflow.ai.model}") String modelName) {
+            @Value("${reconflow.ai.model}") String modelName,
+            @Value("${reconflow.ai.request-timeout:PT60S}") Duration requestTimeout,
+            @Value("${reconflow.ai.typesafe-request-timeout:PT60S}") Duration judgmentTimeout) {
         this.model = model;
         this.judge = judge;
         this.cases = cases;
@@ -80,6 +86,8 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         this.json = json;
         this.validator = validator;
         this.modelName = modelName;
+        this.requestTimeout = requestTimeout;
+        this.judgmentTimeout = judgmentTimeout;
     }
 
     @Override
@@ -99,8 +107,23 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
 
     @Override
     public InvestigationResult investigate(TenantId tenantId, CaseId caseId) {
+        var progress = new InvestigationFailure.Progress();
+        try {
+            return investigate(tenantId, caseId, progress);
+        } catch (RuntimeException error) {
+            Duration timeout = switch (progress.currentStage()) {
+                case GENERATION -> requestTimeout;
+                case JUDGMENT -> judgmentTimeout;
+                default -> null;
+            };
+            throw new InvestigationFailure(error, progress, timeout);
+        }
+    }
+
+    private InvestigationResult investigate(TenantId tenantId, CaseId caseId, InvestigationFailure.Progress progress) {
         var tools = new InvestigationReadTools(
                 tenantId, caseId, cases, reconciliations, transactions, providers, settlements, knowledge, json);
+        tools.retrieveDocumentation();
         var converter = new BeanOutputConverter<>(RecommendationDraft.class);
         if (!(model.getOptions() instanceof ToolCallingChatOptions configured)) {
             throw new IllegalStateException("the investigation model must support read-only tool calling");
@@ -126,14 +149,20 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 suggestedResolution is an optional proposed future decision for an authorized human, never a completed
                 review or applied state change. When recommending further review without a supported final decision,
                 use null, not MANUAL_REVIEW_COMPLETED. Explicitly state that the case remains unchanged.
+                An amount mismatch alone is not evidence of INTERNAL_RECORD_ERROR or PROVIDER_RECORD_ERROR.
+                Use null when records do not establish which source is wrong. An event/reference label containing
+                provider_fee does not change a provider transaction's explicit PAYMENT type.
                 Return only the requested JSON object. Do not include tool commands or extra action fields.
                 """ + converter.getFormat()));
-        messages.add(new UserMessage(QUESTION + "\nFinancial evidence:\n" + String.join("\n", tools.context())));
+        messages.add(new UserMessage(QUESTION + "\nFinancial and retrieved documentation evidence:\n"
+                + String.join("\n", tools.context()) + "\nRetrieval limitations:\n"
+                + String.join("\n", tools.limitations())));
         int rounds = 0;
         int toolCalls = 0;
         int refinement = 0;
         while (rounds++ < 8) {
             var prompt = new Prompt(messages, options);
+            progress.stage(InvestigationFailure.Stage.GENERATION);
             var response = model.call(prompt);
             if ("length".equalsIgnoreCase(response.getResult().getMetadata().getFinishReason())) {
                 LOG.warn(
@@ -142,6 +171,7 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 throw new IllegalStateException("investigation model exhausted its completion-token budget");
             }
             if (response.hasToolCalls()) {
+                progress.stage(InvestigationFailure.Stage.TOOL_EXECUTION);
                 toolCalls += response.getResults().stream()
                         .mapToInt(value -> value.getOutput().getToolCalls().size())
                         .sum();
@@ -153,7 +183,10 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 continue;
             }
             String raw = response.getResult().getOutput().getText();
+            progress.stage(InvestigationFailure.Stage.VALIDATION);
             RecommendationDraft draft;
+            String validationFeedback =
+                    "Return the exact requested JSON shape and cite only supplied evidence references.";
             try {
                 if (raw == null || raw.length() > 20000) {
                     throw new IllegalArgumentException("recommendation exceeds the output budget");
@@ -172,15 +205,20 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                                 .anyMatch(value -> !tools.references().contains(value.reference()))) {
                     throw new IllegalArgumentException("recommendation is invalid or cites unavailable evidence");
                 }
+                String citationFeedback = tools.citationFeedback(draft.evidence());
+                if (citationFeedback != null) {
+                    validationFeedback = citationFeedback;
+                    throw new IllegalArgumentException("recommendation omits supplied documentation");
+                }
             } catch (RuntimeException invalid) {
                 if (refinement++ >= 1) {
                     throw new IllegalStateException("no valid recommendation after bounded refinement");
                 }
-                messages.add(
-                        new UserMessage(
-                                "Refine once: return the exact requested JSON shape and cite only supplied evidence references."));
+                messages.add(response.getResult().getOutput());
+                messages.add(new UserMessage("Refine once: " + validationFeedback));
                 continue;
             }
+            progress.stage(InvestigationFailure.Stage.JUDGMENT);
             var verdict = judge.judge(JevJudgeInput.builder()
                     .question(QUESTION)
                     .answer(raw)
@@ -216,7 +254,8 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                     new UserMessage("Refine once using only supplied evidence. Check every explanation against its "
                             + "specific cited record; attribute fees to settlement evidence. Search policy and provider "
                             + "documentation if fee terms are needed. Use null for suggestedResolution when only further "
-                            + "review is supported, and state that the case remains unchanged. Judgment feedback: "
+                            + "review is supported. An amount mismatch alone does not establish INTERNAL_RECORD_ERROR "
+                            + "or PROVIDER_RECORD_ERROR. State that the case remains unchanged. Judgment feedback: "
                             + feedback.substring(0, Math.min(2000, feedback.length()))));
         }
         throw new IllegalStateException("investigation exceeded its model-call budget");

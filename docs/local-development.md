@@ -61,6 +61,35 @@ support the explicitly requested 1536 dimensions. The application uses the same
 model API credential/endpoint for chat and embeddings. TypeSafe Jev supplies
 judgment, screening and ranking. Keys remain in the process environment.
 
+For live GPT-5 nano investigations, use `AI_REQUEST_TIMEOUT=PT120S` in the
+IntelliJ Run/Debug environment and restart the application. This is the validated
+two-minute maximum **per model request**, not the duration of an investigation.
+Keep retries disabled while measuring repeated live runs. Record elapsed time,
+failure category and workflow stage; one successful run does not establish a
+timeout-free service. TypeSafe has a separate `TYPESAFE_REQUEST_TIMEOUT` setting
+(default `PT60S`, maximum `PT120S`) for judgment, screening and ranking.
+
+Use `python3 dev/demo.py --investigate --investigation-timeout 1800` for live
+acceptance. The investigation may perform up to eight model rounds, plus bounded
+retrieval and judgment calls. This polling allowance is independent of individual
+request deadlines and may need adjustment for observed dependency latency.
+The default 300-second polling allowance is suitable for the protocol fixtures.
+
+The application retrieves screened policy and provider passages before generation.
+When any such passage is supplied, a recommendation must cite an exact supplied
+documentation reference before judgment. A missing citation consumes the same
+single refinement allowance as other validation or judgment failures. Empty
+retrieval permits an advisory result with an explicit limitation; the seeded demo
+still requires a readable documentation citation for its stricter acceptance check.
+
+Failure logs include investigation ID, workflow stage, error category, exception
+and root-cause classes, elapsed milliseconds and model. `request_timeout` records
+the configured generation or judgment deadline; retrieval/tool stages report
+`dependency-specific` because they may invoke several separately timed clients.
+API failure messages remain generic. Logs omit provider messages, payloads and
+credentials. Retry policy changes require accounting for latency, cost and repeated
+tool execution; this fix does not introduce retries.
+
 | Setting | Default / meaning |
 | --- | --- |
 | `DB_URL` | `jdbc:postgresql://localhost:5432/reconflow` |

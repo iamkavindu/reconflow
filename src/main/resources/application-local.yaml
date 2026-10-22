@@ -1,0 +1,39 @@
+# Complete local connections and AI settings. The local profile group also enables observability.
+# Compose supplies infrastructure; only identity memberships are seeded by Flyway.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reconflow}
+    username: ${DB_USERNAME:reconflow}
+    password: ${DB_PASSWORD:reconflow}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  flyway:
+    connect-retries: 30
+    locations: classpath:db/migration,classpath:db/demo
+
+server:
+  address: 127.0.0.1
+  port: ${SERVER_PORT:8080}
+
+reconflow:
+  security:
+    enabled: true
+    issuer: ${OIDC_ISSUER:http://localhost:8180/realms/reconflow}
+    jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8180/realms/reconflow/protocol/openid-connect/certs}
+    audience: reconflow
+  kafka:
+    enabled: true
+  reconciliation:
+    matching-window: ${LOCAL_MATCHING_WINDOW:PT30S}
+  ai:
+    enabled: ${LOCAL_AI_ENABLED:true}
+    knowledge-enabled: ${LOCAL_AI_ENABLED:true}
+    model: ${AI_MODEL:}
+    embedding-model: ${AI_EMBEDDING_MODEL:}
+    api-key: ${AI_API_KEY:}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    request-timeout: ${AI_REQUEST_TIMEOUT:PT60S}
+    max-completion-tokens: ${AI_MAX_COMPLETION_TOKENS:8192}
+    typesafe-api-key: ${TYPESAFE_API_KEY:}
+    typesafe-base-url: ${TYPESAFE_BASE_URL:https://api.typesafe.ai}
+    typesafe-request-timeout: ${TYPESAFE_REQUEST_TIMEOUT:PT60S}

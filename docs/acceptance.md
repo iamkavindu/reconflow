@@ -102,9 +102,12 @@ No credentials are included in the repository or normal CI. Stop the non-AI
 application first, then run:
 
 ```sh
-./mvnw spring-boot:run -Dspring-boot.run.profiles=demo,ai,observability
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 python3 dev/demo.py --investigate > live-ai-result.json
 ```
+
+See [local development](local-development.md) for the central local YAML,
+environment settings and profile responsibilities.
 
 The runner imports the review policy and simulated provider guide. It requires a
 completed, accepted recommendation with a readable documentation citation, checks
@@ -132,9 +135,10 @@ in the implementation environment, where these service settings are unavailable.
 ## What CI proves
 
 The required `verify` job runs the Maven suite and restart recovery test, Compose
-Kafka delivery, all eight scenarios and idempotent replay, two ordinary browser
+Kafka delivery, all eight scenarios and idempotent replay using `local` with
+`LOCAL_AI_ENABLED=false`, two ordinary browser
 checks and real exported telemetry. After waiting for application shutdown, it
-launches the packaged application with `demo,ai,observability`, points actual HTTP
+launches the packaged application with the same `local` profile, points actual HTTP
 clients at `dev/ai_fixture.py`, runs the strengthened investigation demo and the
 AI-enabled browser check, and records JSON evidence/screenshots as artifacts.
 The broker-down readiness/liveness check runs last, so broker recovery does not

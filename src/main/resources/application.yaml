@@ -1,6 +1,9 @@
 spring:
   application:
     name: reconflow
+  profiles:
+    group:
+      local: observability
   modulith:
     events:
       republish-outstanding-events-on-restart: true

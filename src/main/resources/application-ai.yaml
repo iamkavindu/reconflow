@@ -6,5 +6,8 @@ reconflow:
     model: ${AI_MODEL}
     api-key: ${AI_API_KEY}
     base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    request-timeout: ${AI_REQUEST_TIMEOUT:PT60S}
+    max-completion-tokens: ${AI_MAX_COMPLETION_TOKENS:8192}
     typesafe-api-key: ${TYPESAFE_API_KEY}
     typesafe-base-url: ${TYPESAFE_BASE_URL:https://api.typesafe.ai}
+    typesafe-request-timeout: ${TYPESAFE_REQUEST_TIMEOUT:PT60S}

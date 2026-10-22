@@ -6,10 +6,29 @@ the investigation location. Read it with `GET /api/investigations/{id}`, or
 read the case's investigation history with `GET /api/cases/{caseId}/investigations`.
 All requests require the existing tenant-scoped bearer authentication.
 
-The `ai` profile enables execution. Configure `AI_MODEL`, `AI_API_KEY`, and
+The [local environment](local-development.md) enables execution through the
+single `local` profile. The separate `ai` capability profile remains available
+for explicitly composed environments. Configure `AI_MODEL`, `AI_API_KEY`, and
 `TYPESAFE_API_KEY`; optional `AI_BASE_URL` and `TYPESAFE_BASE_URL` select compatible
 endpoints. Credentials belong in environment variables. With execution disabled,
 requesting an investigation returns `503 Service Unavailable`.
+
+Chat requests use a 60-second timeout by default. Set `AI_REQUEST_TIMEOUT` in
+the application process environment to a positive ISO-8601 duration up to `PT2M`
+to accommodate the configured model. Retries remain disabled. This is a timeout
+for each model call, including retrieval query rewriting and expansion, rather
+than the whole investigation. Embedding and TypeSafe requests retain their
+separate timeouts. If the demo runner stops waiting while an investigation is
+still running, increase its polling budget, for example
+`python3 dev/demo.py --investigate --investigation-timeout 600`.
+
+`AI_MAX_COMPLETION_TOKENS` controls the per-chat-request completion budget
+(default `8192`, allowed range `1`–`32768`). Reasoning tokens count toward this
+budget along with the visible answer. A `LENGTH` finish reason means the budget
+was exhausted, even if the visible answer is empty. The worker fails that attempt
+without parsing, judging or refining the incomplete response, and logs a bounded
+diagnostic without the model's text. Adjust the budget and request a new
+investigation. Output size, evidence validation and judgment remain enforced.
 
 The worker gathers immutable financial evidence through public read ports and
 exposes only case-bound read tools. Tenant and resource identities are fixed by

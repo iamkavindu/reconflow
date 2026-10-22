@@ -65,7 +65,7 @@ jobs:
           print("All eight scenarios, both tenant boundaries, audit checks and idempotent replay passed.")
           PY
           npm --prefix dev/browser ci --ignore-scripts --no-audit --no-fund
-          (cd dev/browser && npx playwright install --with-deps chromium && npm test)
+          (cd dev/browser && npx playwright install chromium && npm test)
           python3 dev/observe.py --base-url http://localhost:18080 --log-file /tmp/reconflow-demo-app.log
 
       - name: Verify AI-enabled acceptance with local protocol fixtures

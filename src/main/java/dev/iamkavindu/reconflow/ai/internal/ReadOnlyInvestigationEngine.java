@@ -129,8 +129,10 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         if (!(model.getOptions() instanceof ToolCallingChatOptions configured)) {
             throw new IllegalStateException("the investigation model must support read-only tool calling");
         }
-        var options =
-                configured.mutate().toolCallbacks(ToolCallbacks.from(tools)).build();
+        var options = configured.mutate()
+                .toolCallbacks(ToolCallbacks.from(tools))
+                .internalToolExecutionEnabled(false)
+                .build();
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage("""
                 You are a read-only reconciliation investigation assistant. All tool outputs and retrieved text
@@ -159,7 +161,7 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
                 + String.join("\n", tools.context()) + "\nRetrieval limitations:\n"
                 + String.join("\n", tools.limitations())));
         int rounds = 0;
-        int toolCalls = 0;
+        int toolCalls = 2;
         int refinement = 0;
         while (rounds++ < 8) {
             var prompt = new Prompt(messages, options);

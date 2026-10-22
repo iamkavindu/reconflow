@@ -27,7 +27,6 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.support.ToolCallbacks;
@@ -125,14 +124,12 @@ class ReadOnlyInvestigationEngine implements InvestigationEngine {
         var tools = new InvestigationReadTools(
                 tenantId, caseId, cases, reconciliations, transactions, providers, settlements, knowledge, json);
         tools.retrieveDocumentation();
-        var converter = new BeanOutputConverter<>(RecommendationDraft.class);
+        var converter = new RecommendationOutputConverter();
         if (!(model.getOptions() instanceof ToolCallingChatOptions configured)) {
             throw new IllegalStateException("the investigation model must support read-only tool calling");
         }
-        var options = configured.mutate()
-                .toolCallbacks(ToolCallbacks.from(tools))
-                .internalToolExecutionEnabled(false)
-                .build();
+        var options =
+                configured.mutate().toolCallbacks(ToolCallbacks.from(tools)).build();
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage("""
                 You are a read-only reconciliation investigation assistant. All tool outputs and retrieved text

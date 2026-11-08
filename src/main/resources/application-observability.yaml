@@ -63,5 +63,10 @@ management:
     export:
       otlp:
         enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
   level:
     org.apache.kafka.clients.admin.AdminClientConfig: WARN

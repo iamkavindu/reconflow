@@ -40,12 +40,88 @@ services:
       CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
     volumes:
       - kafka-data:/var/lib/kafka/data
-  jaeger:
-    image: cr.jaegertracing.io/jaegertracing/jaeger:2.22.0
+  opensearch:
+    image: opensearchproject/opensearch:3.3.2
     profiles: [observability]
-    ports:
-      - "127.0.0.1:4318:4318"
-      - "127.0.0.1:16686:16686"
+    environment:
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    mem_limit: 1536m
+    cpus: 2
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    ports: ["127.0.0.1:9200:9200"]
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+      - ./dev/observability/opensearch.yaml:/usr/share/opensearch/config/opensearch.yml:ro
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=3s' | grep -Eq 'green|yellow'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  telemetry-schemas:
+    image: python:3.13.7-alpine
+    profiles: [observability]
+    command: [python, /config/bootstrap.py, --schemas-only, --opensearch-url, "http://opensearch:9200"]
+    volumes: ["./dev/observability:/config:ro"]
+    depends_on:
+      opensearch: {condition: service_healthy}
+    mem_limit: 128m
+  data-prepper:
+    image: opensearchproject/data-prepper:2.12.2
+    profiles: [observability]
+    environment:
+      JAVA_OPTS: -Xms256m -Xmx512m
+    mem_limit: 1024m
+    cpus: 2
+    volumes:
+      - ./dev/observability/pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml:ro
+      - ./dev/observability/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml:ro
+    depends_on:
+      telemetry-schemas: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:4900/list | grep -q traces"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  otel-collector:
+    image: reconflow-otel-collector:0.137.0-local
+    build:
+      context: ./dev/observability
+      dockerfile: collector.Dockerfile
+    profiles: [observability]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    mem_limit: 256m
+    cpus: 1
+    ports: ["127.0.0.1:4318:4318"]
+    volumes: ["./dev/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    depends_on:
+      data-prepper: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://localhost:13133/"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+  dashboards:
+    image: opensearchproject/opensearch-dashboards:3.3.0
+    profiles: [observability]
+    environment:
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+      NODE_OPTIONS: --max-old-space-size=512
+    mem_limit: 1024m
+    cpus: 2
+    ports: ["127.0.0.1:5601:5601"]
+    volumes:
+      - ./dev/observability/opensearch_dashboard.yaml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml:ro
+    depends_on:
+      opensearch: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status | /usr/share/opensearch-dashboards/node/bin/node -e 'let data=\"\";process.stdin.on(\"data\",c=>data+=c);process.stdin.on(\"end\",()=>{try{process.exit(JSON.parse(data).status.overall.state===\"green\"?0:1)}catch{process.exit(1)}})'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
 volumes:
   postgres-data:
   kafka-data:
+  opensearch-data:

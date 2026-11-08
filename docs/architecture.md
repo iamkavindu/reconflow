@@ -130,3 +130,12 @@ These do not need to be added to demonstrate the agreed workflows.
 
 The [acceptance review](acceptance.md) maps the product requirements to checks
 and distinguishes tested integration behavior from pending live AI evaluation.
+
+## Local observability storage
+
+The opt-in local pipeline sends logs, Micrometer OTLP metrics and OpenTelemetry
+traces through Collector and Data Prepper to persistent OpenSearch indexes.
+Dashboards uses classic Trace Analytics and indexed Metric analytics. Modules
+remain one `reconflow` service. Bounded telemetry queues do not participate in
+business recovery or readiness; PostgreSQL retains authoritative audit ownership.
+See [observability](observability.md) for pinned versions and operational details.

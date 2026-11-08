@@ -3,7 +3,8 @@
 Use the `local` Spring profile for the complete local environment:
 
 ```sh
-docker compose --profile observability up -d
+docker compose --profile observability up -d --build --wait --wait-timeout 300
+python3 dev/observability/bootstrap.py
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
@@ -108,6 +109,9 @@ tool execution; this fix does not introduce retries.
 | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai`; optional compatible endpoint override |
 | `MANAGEMENT_PORT` | `9091`, through the shared observability preset |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `http://localhost:4318/v1/traces`, through the shared observability preset |
+| `OTLP_BASE_URL` | `http://localhost:4318`; shared base, no signal suffix |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics URL; defaults to base + `/v1/metrics` |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Full logs URL; defaults to base + `/v1/logs` |
 
 Changing an issuer also requires the appropriate JWKS URL and imported identities.
 The seeded browser client allows application ports 8080 and 18080; register the
@@ -119,7 +123,7 @@ the tracked YAML files.
 ## 2. Start infrastructure and application
 
 Run the two startup commands at the top of this guide. Ports 5432, 9092, 8180,
-8080, 9091, 4318 and 16686 must be available. Application and operator listeners
+8080, 9091, 4318 and 9200/5601 must be available. Application and operator listeners
 bind to loopback. Missing required AI settings fail startup when AI is enabled.
 
 Flyway loads normal migrations and the idempotent local tenant/membership seed.
@@ -163,11 +167,13 @@ startup and use `python3 dev/demo.py --investigate --timeout 700`.
 
 ## 4. Health, traces and shutdown
 
-Use `http://127.0.0.1:9091/actuator/health/readiness`,
-`http://127.0.0.1:9091/actuator/health/liveness` and
-`http://127.0.0.1:9091/actuator/prometheus` for operators. Jaeger is at
-`http://localhost:16686`. Run `python3 dev/observe.py` for the trace/metrics probe;
-it creates one additional case. See [observability](observability.md) for details.
+Use `http://127.0.0.1:9091/actuator/health/readiness` and
+`http://127.0.0.1:9091/actuator/health/liveness` for operators.
+OpenSearch is at `http://127.0.0.1:9200`; Dashboards is at
+`http://127.0.0.1:5601`. Run `python3 dev/observe.py` for indexed logs, metrics
+and trace checks; it creates one additional case. See [observability](observability.md)
+for host settings, resource requirements, bootstrap, endpoint overrides and
+troubleshooting. The local telemetry stack uses loopback plaintext without authentication.
 
 Stop the application with Ctrl-C, then run
 `docker compose --profile observability down`. Volumes and historical evidence

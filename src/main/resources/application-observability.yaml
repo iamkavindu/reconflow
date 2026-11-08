@@ -5,7 +5,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        include: health
   endpoint:
     health:
       show-details: never
@@ -18,6 +18,11 @@ management:
         readiness:
           include: readinessState,db,providerKafka
   metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        spring.kafka.template: true
+        spring.kafka.listener: true
     tags:
       application: reconflow
   tracing:
@@ -29,13 +34,36 @@ management:
       otlp:
         enabled: true
   opentelemetry:
+    logging:
+      export:
+        schedule-delay: 1s
+        max-queue-size: 2048
+        max-batch-size: 256
+        timeout: 5s
+        otlp:
+          transport: http
+          endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:${OTLP_BASE_URL:http://localhost:4318}/v1/logs}
     resource-attributes:
       service.name: reconflow
     tracing:
       export:
         schedule-delay: 1s
         otlp:
-          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+          transport: http
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTLP_BASE_URL:http://localhost:4318}/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: true
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTLP_BASE_URL:http://localhost:4318}/v1/metrics}
+        step: 10s
+        aggregation-temporality: delta
+        base-time-unit: seconds
+  logging:
+    export:
+      otlp:
+        enabled: true
+
 logging:
   structured:
     format:

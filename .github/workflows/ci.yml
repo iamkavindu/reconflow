@@ -17,7 +17,7 @@ jobs:
   verify:
     name: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
@@ -33,10 +33,39 @@ jobs:
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
+      - name: Prepare indexed telemetry
+        run: |
+          sudo sysctl -w vm.max_map_count=262144
+          docker compose --profile observability up -d --build --wait --wait-timeout 300
+          python3 dev/observability/bootstrap.py > /tmp/reconflow-bootstrap-first.json
+          python3 dev/observability/bootstrap.py > /tmp/reconflow-bootstrap-repeat.json
+
       - name: Verify Compose Kafka delivery
         run: |
           docker compose --profile observability up -d
           ./mvnw --batch-mode --no-transfer-progress -Dtest=ProviderSimulationIntegrationTest -Dreconflow.test.kafka-bootstrap-servers=localhost:9092 test
+
+      - name: Verify startup without telemetry exports
+        run: |
+          java -jar target/reconflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo --server.port=18081 > /tmp/reconflow-disabled-app.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true; wait "$app_pid" 2>/dev/null || true' EXIT
+          python3 - <<'PY'
+          import socket, time, urllib.error, urllib.request
+          deadline = time.monotonic() + 90
+          while True:
+              try:
+                  urllib.request.urlopen('http://localhost:18081/api/session', timeout=3)
+              except urllib.error.HTTPError as error:
+                  if error.code == 401:
+                      break
+              except OSError:
+                  pass
+              assert time.monotonic() < deadline, 'Base/demo startup did not become available'
+              time.sleep(0.5)
+          with socket.socket() as listener:
+              assert listener.connect_ex(('127.0.0.1', 9091)) != 0, 'Disabled profile exposed management'
+          PY
 
       - name: Verify complete authenticated demo
         run: |
@@ -66,7 +95,29 @@ jobs:
           PY
           npm --prefix dev/browser ci --ignore-scripts --no-audit --no-fund
           (cd dev/browser && npx playwright install chromium && npm test)
-          python3 dev/observe.py --base-url http://localhost:18080 --log-file /tmp/reconflow-demo-app.log
+          python3 dev/observe.py --base-url http://localhost:18080 --log-file /tmp/reconflow-demo-app.log > /tmp/reconflow-telemetry.json
+          VERIFY_OBSERVABILITY=true npm --prefix dev/browser test -- observability.spec.js
+          docker compose stop otel-collector data-prepper
+          python3 dev/observe.py --base-url http://localhost:18080 --workflow-only > /tmp/reconflow-telemetry-outage.json
+          docker compose start data-prepper otel-collector
+          docker compose restart opensearch
+          python3 dev/observability/bootstrap.py
+          python3 - <<'PY'
+          import json, urllib.request
+          evidence = json.load(open('/tmp/reconflow-telemetry.json'))
+          counts = {}
+          for signal, index, query in [
+              ('traces', 'otel-v1-apm-span-*', {'term': {'traceId': evidence['traceId']}}),
+              ('logs', 'reconflow-logs-*', {'term': {'traceId': evidence['traceId']}}),
+              ('metrics', 'ss4o_metrics-otel-reconflow-v2-*', {'range': {'time': {'gte': evidence['startedAt']}}})]:
+              body = json.dumps({'query': query}).encode()
+              request = urllib.request.Request('http://127.0.0.1:9200/' + index + '/_count', data=body, headers={'Content-Type': 'application/json'})
+              with urllib.request.urlopen(request, timeout=10) as response:
+                  counts[signal] = json.load(response)['count']
+          assert counts['traces'] >= evidence['traceVerified']['spanCount'] and counts['logs'] > 0 and counts['metrics'] > 0
+          open('/tmp/reconflow-telemetry-restart.json', 'w').write(json.dumps({'retainedDocuments': counts, 'traceId': evidence['traceId']}))
+          print('Indexed traces, logs and metrics survived normal OpenSearch restart.')
+          PY
 
       - name: Verify AI-enabled acceptance with local protocol fixtures
         env:
@@ -114,13 +165,16 @@ jobs:
           path: |
             /tmp/reconflow-demo-first.json
             /tmp/reconflow-ai-demo.json
+            /tmp/reconflow-telemetry*.json
+            /tmp/reconflow-bootstrap*.json
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Capture Kafka diagnostics
+      - name: Capture component diagnostics
         if: failure()
         run: |
-          docker compose logs --no-color
+          docker compose --profile observability ps -a
+          docker compose --profile observability logs --no-color --tail=300
           if test -f /tmp/reconflow-demo-app.log; then cat /tmp/reconflow-demo-app.log; fi
           if test -f /tmp/reconflow-ai-app.log; then cat /tmp/reconflow-ai-app.log; fi
           if test -f /tmp/reconflow-ai-fixture.log; then cat /tmp/reconflow-ai-fixture.log; fi

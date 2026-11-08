@@ -63,7 +63,8 @@ configuration. After setting the required model/embedding/TypeSafe environment
 variables, start with a single Spring profile:
 
 ```sh
-docker compose --profile observability up -d
+docker compose --profile observability up -d --build --wait --wait-timeout 300
+python3 dev/observability/bootstrap.py
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
@@ -123,3 +124,7 @@ evidence and explicit human resolution, using local AI protocol fixtures.
 OpenAPI is available at `/v3/api-docs` with a valid bearer token. Module-boundary
 tests keep financial, case, identity, AI and reporting responsibilities explicit.
 The application performs no real payment, payout or refund execution.
+
+Local logs, metrics and traces use Collector → Data Prepper → OpenSearch →
+OpenSearch Dashboards. Read [observability](docs/observability.md) before starting
+the profile for host prerequisites, bootstrap, resource settings and exact probe commands.

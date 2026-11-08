@@ -1,0 +1,86 @@
+traces:
+  workers: 2
+  delay: 100
+  source:
+    otel_trace_source:
+      port: 21890
+      ssl: false
+      health_check_service: true
+  buffer:
+    bounded_blocking: {buffer_size: 4096, batch_size: 256}
+  sink:
+    - pipeline: {name: trace-documents}
+    - pipeline: {name: service-map}
+trace-documents:
+  workers: 2
+  source:
+    pipeline: {name: traces}
+  buffer:
+    bounded_blocking: {buffer_size: 4096, batch_size: 256}
+  processor:
+    - otel_traces:
+        trace_flush_interval: 5
+        trace_group_cache_max_size: 10000
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index_type: trace-analytics-raw
+        bulk_size: 1
+        flush_timeout: 1000
+        max_retries: 5
+service-map:
+  workers: 1
+  source:
+    pipeline: {name: traces}
+  buffer:
+    bounded_blocking: {buffer_size: 4096, batch_size: 256}
+  processor:
+    - service_map: {}
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index_type: trace-analytics-service-map
+        bulk_size: 1
+        flush_timeout: 1000
+        max_retries: 5
+metrics:
+  workers: 2
+  delay: 100
+  source:
+    otel_metrics_source:
+      port: 21891
+      ssl: false
+      health_check_service: true
+  buffer:
+    bounded_blocking: {buffer_size: 4096, batch_size: 256}
+  processor:
+    - otel_metrics:
+        calculate_histogram_buckets: true
+        calculate_exponential_histogram_buckets: true
+        flatten_attributes: false
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index_type: custom
+        index: ss4o_metrics-otel-reconflow-v2-%{yyyy.MM.dd}
+        bulk_size: 1
+        flush_timeout: 1000
+        max_retries: 5
+logs:
+  workers: 2
+  delay: 100
+  source:
+    otel_logs_source:
+      port: 21892
+      ssl: false
+      health_check_service: true
+  buffer:
+    bounded_blocking: {buffer_size: 4096, batch_size: 256}
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index_type: custom
+        index: reconflow-logs-%{yyyy.MM.dd}
+        bulk_size: 1
+        flush_timeout: 1000
+        max_retries: 5

@@ -1,0 +1,273 @@
+{
+  "index_patterns": [
+    "ss4o_metrics-otel-reconflow-v2-*"
+  ],
+  "priority": 200,
+  "_meta": {
+    "source": "Data Prepper 2.12.2 metrics-otel-v1-index-template",
+    "owner": "reconflow-local"
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "date_detection": false,
+      "dynamic_templates": [
+        {
+          "resources_map": {
+            "mapping": {
+              "type": "keyword"
+            },
+            "path_match": "resource.*",
+            "match_mapping_type": "string"
+          }
+        },
+        {
+          "metric_attributes": {
+            "path_match": "attributes.*",
+            "mapping": {
+              "type": "keyword"
+            },
+            "match_mapping_type": "string"
+          }
+        }
+      ],
+      "_source": {
+        "enabled": true
+      },
+      "properties": {
+        "name": {
+          "type": "keyword",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "data_stream": {
+              "properties": {
+                "dataset": {
+                  "ignore_above": 128,
+                  "type": "keyword"
+                },
+                "namespace": {
+                  "ignore_above": 128,
+                  "type": "keyword"
+                },
+                "type": {
+                  "ignore_above": 56,
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "description": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "unit": {
+          "type": "keyword",
+          "ignore_above": 128
+        },
+        "kind": {
+          "type": "keyword",
+          "ignore_above": 128
+        },
+        "aggregationTemporality": {
+          "type": "keyword",
+          "ignore_above": 128
+        },
+        "monotonic": {
+          "type": "boolean"
+        },
+        "startTime": {
+          "type": "date"
+        },
+        "@timestamp": {
+          "type": "date"
+        },
+        "time": {
+          "type": "date_nanos"
+        },
+        "observedTimestamp": {
+          "type": "date_nanos"
+        },
+        "value@int": {
+          "type": "long"
+        },
+        "value@double": {
+          "type": "double"
+        },
+        "value": {
+          "type": "double"
+        },
+        "buckets": {
+          "type": "nested",
+          "properties": {
+            "count": {
+              "type": "long"
+            },
+            "sum": {
+              "type": "double"
+            },
+            "max": {
+              "type": "double"
+            },
+            "min": {
+              "type": "double"
+            }
+          }
+        },
+        "bucketCount": {
+          "type": "long"
+        },
+        "bucketCountsList": {
+          "type": "long"
+        },
+        "explicitBoundsList": {
+          "type": "double"
+        },
+        "explicitBoundsCount": {
+          "type": "double"
+        },
+        "quantiles": {
+          "properties": {
+            "quantile": {
+              "type": "double"
+            },
+            "value": {
+              "type": "double"
+            }
+          }
+        },
+        "quantileValuesCount": {
+          "type": "long"
+        },
+        "positiveBuckets": {
+          "type": "nested",
+          "properties": {
+            "count": {
+              "type": "long"
+            },
+            "max": {
+              "type": "double"
+            },
+            "min": {
+              "type": "double"
+            }
+          }
+        },
+        "negativeBuckets": {
+          "type": "nested",
+          "properties": {
+            "count": {
+              "type": "long"
+            },
+            "max": {
+              "type": "double"
+            },
+            "min": {
+              "type": "double"
+            }
+          }
+        },
+        "negativeOffset": {
+          "type": "integer"
+        },
+        "positiveOffset": {
+          "type": "integer"
+        },
+        "zeroCount": {
+          "type": "long"
+        },
+        "scale": {
+          "type": "long"
+        },
+        "max": {
+          "type": "double"
+        },
+        "min": {
+          "type": "double"
+        },
+        "sum": {
+          "type": "double"
+        },
+        "count": {
+          "type": "long"
+        },
+        "exemplar": {
+          "properties": {
+            "time": {
+              "type": "date_nanos"
+            },
+            "traceId": {
+              "ignore_above": 256,
+              "type": "keyword"
+            },
+            "spanId": {
+              "ignore_above": 256,
+              "type": "keyword"
+            }
+          }
+        },
+        "instrumentationScope": {
+          "properties": {
+            "name": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 128
+                }
+              }
+            },
+            "version": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "droppedAttributesCount": {
+              "type": "integer"
+            },
+            "schemaUrl": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        },
+        "schemaUrl": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "serviceName": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

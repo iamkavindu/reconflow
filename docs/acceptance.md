@@ -28,7 +28,7 @@ documentation alone is not evidence that a live service passed.
 | Idempotency and retained financial history (§19; domain invariants) | Duplicate delivery tests; demo replay compares original identities and dashboard counts; resolution preserves determination |
 | Tenant isolation including AI retrieval (§11,19,21.E) | Signed-token API tests; pgvector tenant/kind tests; demo checks both tenant directions and foreign investigation/citation denial |
 | Reliable asynchronous delivery (§19) | Kafka retry/order/DLT tests; `EventRecoveryIntegrationTest` restarts the application over the same database with AI disabled and verifies an unfinished publication completes |
-| Useful health, logs, metrics and traces (§19) | `dev/observe.py`: real Jaeger HTTP/Kafka/module trace, correlated committed audit log, Prometheus metrics, safe operator endpoints and broker-down readiness with process liveness UP |
+| Useful health, logs, metrics and traces (§19) | `dev/observe.py`: indexed OpenSearch HTTP/Kafka/module trace, correlated committed audit log, indexed OTLP metrics, safe operator endpoints and broker-down readiness with process liveness UP |
 | Testability/evolvability (§19) | Real PostgreSQL/pgvector, Kafka and Keycloak; module-boundary test; [architecture](architecture.md) explains ownership and recovery |
 | Minimal analyst/admin UI, API docs, reproducible data (§26–27) | Static workspace, authenticated OpenAPI, README startup, demo runner, three browser checks across the ordinary and AI-enabled configurations |
 
@@ -51,10 +51,11 @@ workflow/rule builders and automated accounting stay outside v1.0.
 Prerequisites: Java 25, Docker with Compose, Python 3.10+; Node 20+ is needed only
 for browser development checks. The Maven wrapper downloads Maven. Local ports
 5432, 8180, 9092 and 8080 must be available; observability also uses 9091, 4318
-and 16686.
+and 9200/5601.
 
 ```sh
-docker compose --profile observability up -d
+docker compose --profile observability up -d --build --wait --wait-timeout 300
+python3 dev/observability/bootstrap.py
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo,observability
 ```
 
@@ -79,7 +80,7 @@ Load the case audit history and confirm the reconciliation remains
 REVIEW_REQUIRED. The base demo intentionally reports AI as unconfigured.
 
 `docker compose --profile observability down` stops services while preserving
-database/Kafka volumes. Subsequent runs retain prior evidence; choose a fresh run
+database/Kafka/OpenSearch volumes. Subsequent runs retain prior evidence; choose a fresh run
 ID for another demonstration. Keycloak reimports the seeded local realm on start.
 Do not run two application instances against the demo database while following
 these single-process acceptance instructions.
@@ -149,3 +150,55 @@ CI. Its vectors, recommendations and judge scores are fixed. It proves service
 contract wiring, citation rendering, application authorization and human-control
 boundaries, not probabilistic quality. Guardrail failure/refinement/outage cases
 remain covered by the focused Java integration suites.
+
+## Local observability migration verification — 2026-11-08
+
+Executed against isolated Compose projects; existing user files and persistent
+volumes were preserved. These are runtime results, not configuration-only claims:
+
+| Check | Observed result |
+| --- | --- |
+| Complete Maven suite | 135 tests, zero failures/errors/skips; 1 minute 43 seconds with cached images |
+| Exports disabled | Packaged demo startup, eight authenticated scenarios and tenant isolation passed; management listener absent |
+| Exports enabled | Packaged local startup; independently indexed logs, traces and OTLP metrics passed |
+| Fresh infrastructure | New OpenSearch volume, schema startup gate, fresh and repeat saved-object bootstrap passed |
+| Workflow trace | `3e2c049cc51a33d433294a189cb51d59`; 15 spans, HTTP server, Kafka producer/consumer, provider/reconciliation/cases/audit |
+| Committed case log | Case `f660e1df-eaac-4f9e-877b-cebaaf01dfa8`; event and business correlation IDs matched PostgreSQL audit; ECS console also matched |
+| Metrics | Fresh JVM gauge, HTTP/Kafka histograms and module delta sums; actual units/values/buckets and no business dimensions verified |
+| Application restart | A second fresh workflow passed delta metric and histogram assertions after process reset |
+| Telemetry outage | Stopped Collector and Data Prepper; authenticated mismatch still reconciled and opened a case with readiness UP |
+| Broker outage | Readiness DOWN, liveness UP; broker restored |
+| Normal OpenSearch restart | Prior trace retained: 15 spans, 3 logs and 4293 fresh metric documents |
+| Browser | Two existing authenticated browser checks passed; operations dashboard, 15-span waterfall and native indexed timer picker passed in installed Chrome |
+| Startup timing | Final cached Compose startup including readiness checks: 12.74 seconds |
+
+Evidence generated in this run: `/tmp/reconflow-fresh-telemetry.json`,
+`/tmp/reconflow-fresh-restart-evidence.json`, fresh bootstrap JSON files,
+`/tmp/reconflow-full-verify.log` and browser screenshots under
+`dev/browser/screenshots/observability*.png`. CI generates equivalent telemetry,
+bootstrap, restart JSON and screenshot artifacts. GitHub Actions itself was not
+run remotely during this local session.
+
+OpenSearch 3.3.2 and Dashboards 3.3.0 were verified together. The native metric
+picker lists indexed histograms/timers; gauge and sum-counter views use the
+provisioned operations dashboard and Discover. No external metrics database is
+required. With one service, no interservice map edges/documents were observed;
+the standard service-map pipeline is installed, and the waterfall identifies
+`reconflow` without inventing module services. The supplied external trace parent
+has no upstream client span, so that probe trace has no root trace-group name.
+
+Seven-day ISM expiry was configured and the trace index's active custom rollover
+policy was queried; seven days of wall-clock expiry were not waited out. Bounded
+telemetry queues can lose data. Cold image downloads in this environment were
+slow and initially interrupted verification; all required images eventually
+completed and the complete suite was rerun successfully. CI has a 35-minute job
+budget and bounded service/probe waits; cold registry delays remain external.
+
+Validation used `reconflow-observe-check` for PostgreSQL/Kafka/Keycloak and
+`reconflow-observe-fresh` for the final telemetry volume. Containers are stopped
+after verification and both projects' named volumes remain. Ordinary documented
+startup uses the default Compose project and creates its own local data. To
+inspect the recorded run, start the three business services with
+`docker compose -p reconflow-observe-check up -d postgres kafka keycloak`, then
+start `dashboards otel-collector` with
+`docker compose -p reconflow-observe-fresh --profile observability up -d --wait dashboards otel-collector`.
